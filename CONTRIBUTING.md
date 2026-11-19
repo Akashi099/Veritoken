@@ -147,6 +147,26 @@ policy, current limits, and reduction techniques.
 
 ---
 
+## Documentation Maintenance Checklist
+
+When your change touches the items below, update only the documents listed
+next to it. Do not edit unrelated pages just because they mention the same
+area.
+
+| If you change… | Check these canonical documents |
+| --- | --- |
+| Contract public functions, signatures, or errors | [docs/contract-api-reference.md](docs/contract-api-reference.md), [CHANGELOG.md](CHANGELOG.md) |
+| Contract storage keys or layout | [docs/storage-layout.md](docs/storage-layout.md), [docs/storage-patterns.md](docs/storage-patterns.md) |
+| Contract WASM size or budgets | [docs/contract-size-budget.md](docs/contract-size-budget.md) |
+| SDK API or usage | [sdk/README.md](sdk/README.md), [sdk/VERSIONING.md](sdk/VERSIONING.md) |
+| Frontend env variables or setup | [CONTRIBUTING.md](CONTRIBUTING.md) (Frontend setup), [README.md](README.md) |
+| Deployment scripts or steps | [docs/deployment-automation.md](docs/deployment-automation.md), [docs/mainnet-deployment.md](docs/mainnet-deployment.md), [deployment/scripts/README.md](deployment/scripts/README.md) |
+| Test commands or test suites | [CONTRIBUTING.md](CONTRIBUTING.md) (Test commands by area), [tests/integration/README.md](tests/integration/README.md), [tests/e2e/README.md](tests/e2e/README.md) |
+| Security-sensitive logic (auth, transfers, storage) | [docs/security-checklist.md](docs/security-checklist.md) |
+| Common failures or fixes | [docs/troubleshooting.md](docs/troubleshooting.md) |
+
+Update only the rows that your change affects.
+
 ## Good First Issues
 
 Look for issues labelled [`good first issue`](https://github.com/abore9769/Veritoken/issues?q=label%3A%22good+first+issue%22) — these are scoped to be approachable without deep familiarity with the full codebase.
