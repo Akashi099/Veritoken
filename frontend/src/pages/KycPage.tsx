@@ -181,6 +181,7 @@ export default function KycPage() {
               type="number"
               value={approveForm.expiry_days}
               onChange={set("expiry_days")}
+              hint="Number of days from approval until this KYC record expires."
             />
             <button
               type="submit"
