@@ -39,7 +39,7 @@ const HELP_ITEMS = [
   },
   {
     heading: "What does Import do?",
-    body: "Loads a previously exported JSON file and lets you preview the stored settings before applying them. Applying the settings sends a write transaction to the compliance contract — your wallet must be connected.",
+    body: "Loads a previously exported JSON file and lets you preview the stored settings. Importing and \"Apply\" on this page only prepare the configuration for review — they do not send a transaction. To activate the rules on-chain, save them from the Compliance Rules form on the Admin page (\"Save Rules\" or \"Propose Rule Change\"), which requires a connected admin wallet.",
   },
   {
     heading: "When would I use this?",
@@ -107,6 +107,45 @@ function ConfigPreview({ config }: { config: ComplianceConfigExport }) {
         </div>
       )}
     </div>
+  );
+}
+
+// ── File scope explanation (issue #1073) ─────────────────────────────────────
+
+/**
+ * Describes exactly what the exported file contains (mirrors
+ * `ComplianceConfigExport` in lib/complianceConfig.ts) and that importing it
+ * prepares configuration only — activation is a separate on-chain step.
+ */
+export function ConfigFileExplainer() {
+  return (
+    <section
+      aria-labelledby="config-file-explainer-heading"
+      data-testid="config-file-explainer"
+      style={{
+        borderRadius: 10,
+        border: "1px solid var(--border)",
+        background: "var(--surface-2)",
+        padding: "0.85rem 1rem",
+        fontSize: "0.845rem",
+        lineHeight: 1.5,
+      }}
+    >
+      <h2 id="config-file-explainer-heading" style={{ fontSize: "0.9rem", fontWeight: 600, margin: "0 0 0.4rem" }}>
+        What the file contains
+      </h2>
+      <p style={{ margin: "0 0 0.4rem" }}>
+        Policy values: the compliance rules (including the paused flag), tier transfer policies, and
+        risk config. It also records environment metadata — the export label, the source network, the
+        export timestamp, and a format version. Blocklisted addresses are not included.
+      </p>
+      <p style={{ margin: 0 }}>
+        <strong>Importing does not activate a policy.</strong> Import and Apply here only load the
+        settings for review; no transaction is sent. Changes take effect on-chain only when an admin
+        saves them from the Compliance Rules form on the Admin page (&ldquo;Save Rules&rdquo; or
+        &ldquo;Propose Rule Change&rdquo;).
+      </p>
+    </section>
   );
 }
 
@@ -257,6 +296,8 @@ export default function ComplianceConfigIOPage() {
       />
 
       <div style={{ display: "grid", gap: "1.25rem" }}>
+        <ConfigFileExplainer />
+
         {/* ── Export card ──────────────────────────────────────────────── */}
         <Card title="Export current configuration" subtitle="Downloads the live compliance rules and tier policies as a JSON file.">
           <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
