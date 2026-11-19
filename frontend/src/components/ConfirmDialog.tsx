@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from "react";
+import { NetworkIndicator } from "./NetworkIndicator";
 
 interface ConfirmDialogProps {
   title: string;
@@ -12,6 +13,8 @@ interface ConfirmDialogProps {
    * keep working unchanged. */
   open?: boolean;
   danger?: boolean;
+  /** Shows the active network above the actions, for transaction confirmations. */
+  showNetwork?: boolean;
 }
 
 export default function ConfirmDialog({
@@ -23,6 +26,7 @@ export default function ConfirmDialog({
   loading = false,
   open = true,
   danger = false,
+  showNetwork = false,
 }: ConfirmDialogProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = "confirm-dialog-title";
@@ -110,6 +114,8 @@ export default function ConfirmDialog({
         <div style={{ fontSize: "0.9rem", color: "var(--muted, #888)", marginBottom: "1.5rem", lineHeight: 1.55 }}>
           {description}
         </div>
+
+        {showNetwork && <NetworkIndicator />}
 
         <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
           <button type="button" onClick={onCancel} disabled={loading} style={{ minWidth: 80 }}>

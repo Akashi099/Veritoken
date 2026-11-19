@@ -209,6 +209,7 @@ export default function KycPage() {
           description={confirm.description}
           onConfirm={confirm.onConfirm}
           onCancel={() => setConfirm(null)}
+          showNetwork
         />
       )}
     </div>
