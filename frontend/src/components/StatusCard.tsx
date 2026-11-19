@@ -4,6 +4,7 @@ import { contracts } from "../lib/contracts/index";
 import { CONTRACT_IDS } from "../lib/stellar";
 import { Card, Skeleton } from "./ui";
 import { formatTokenAmount, formatStroops, getPrecisionWarning } from "../lib/numericFormat";
+import { formatKycExpiry } from "../lib/dateFormat";
 import type { KycRecord } from "../types";
 
 const THIRTY_DAYS_S = 30 * 24 * 60 * 60;
@@ -131,7 +132,7 @@ export default function StatusCard() {
                   const secondsLeft = expiry - nowS;
                   const expiring = secondsLeft > 0 && secondsLeft < THIRTY_DAYS_S;
                   const expired = secondsLeft <= 0;
-                  const expiryDate = new Date(expiry * 1000).toLocaleDateString();
+                  const expiryDate = formatKycExpiry(expiry);
                   return (
                     <span style={{ fontSize: "0.85rem", color: expired || expiring ? "#f59e0b" : undefined }}>
                       <strong>Expires:</strong> {expiryDate}
