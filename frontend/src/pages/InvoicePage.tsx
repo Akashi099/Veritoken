@@ -137,6 +137,9 @@ export default function InvoicePage() {
         signTx,
       );
       addToast("Invoice tokens issued successfully.", "success");
+      // Only clear the form after a confirmed success. Failed or rejected
+      // submissions fall through to the catch block and keep the user's
+      // input so they can fix the wallet/network problem and retry.
       setIssueAmount("");
       setIssueTo("");
       await loadChainState();
@@ -172,6 +175,7 @@ export default function InvoicePage() {
     try {
       await contracts.invoice.redeem(address, BigInt(redeemAmount), signTx);
       addToast("Tokens redeemed successfully.", "success");
+      // Preserve input on failure; reset only after confirmed success.
       setRedeemAmount("");
       await loadChainState();
     } catch (err) {

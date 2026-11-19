@@ -154,3 +154,63 @@ describe("InvoicePage – redeem form accessibility", () => {
     );
   });
 });
+
+describe("InvoicePage – form values after submission", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("preserves issue form values when the transaction fails", async () => {
+    vi.mocked(contracts.invoice.issue).mockRejectedValueOnce(new Error("Network error"));
+    renderInvoicePage();
+
+    const recipient = await screen.findByLabelText(/Recipient Address/i);
+    const amount = screen.getByLabelText(/^Amount \(stroops\)/i);
+    fireEvent.change(recipient, { target: { value: ADDRESS } });
+    fireEvent.change(amount, { target: { value: "500" } });
+    fireEvent.click(screen.getByRole("button", { name: /Issue Invoice Tokens/i }));
+
+    expect(await screen.findByText("Network error")).toBeInTheDocument();
+    expect(recipient).toHaveValue(ADDRESS);
+    expect(amount).toHaveValue(500);
+  });
+
+  it("preserves issue form values when the wallet rejects signing", async () => {
+    vi.mocked(contracts.invoice.issue).mockRejectedValueOnce(new Error("User declined"));
+    renderInvoicePage();
+
+    const amount = await screen.findByLabelText(/^Amount \(stroops\)/i);
+    fireEvent.change(amount, { target: { value: "750" } });
+    fireEvent.click(screen.getByRole("button", { name: /Issue Invoice Tokens/i }));
+
+    expect(await screen.findByText("User declined")).toBeInTheDocument();
+    expect(amount).toHaveValue(750);
+  });
+
+  it("clears issue form values after a confirmed success", async () => {
+    renderInvoicePage();
+
+    const recipient = await screen.findByLabelText(/Recipient Address/i);
+    const amount = screen.getByLabelText(/^Amount \(stroops\)/i);
+    fireEvent.change(recipient, { target: { value: ADDRESS } });
+    fireEvent.change(amount, { target: { value: "500" } });
+    fireEvent.click(screen.getByRole("button", { name: /Issue Invoice Tokens/i }));
+
+    await waitFor(() => expect(amount).toHaveValue(null));
+    expect(recipient).toHaveValue("");
+  });
+
+  it("preserves redeem amount when the transaction fails", async () => {
+    vi.mocked(contracts.invoice.redeem).mockRejectedValueOnce(new Error("Redeem failed"));
+    renderInvoicePage();
+    await screen.findByText("INV-001");
+
+    fireEvent.click(screen.getByRole("button", { name: /^Redeem$/i }));
+    const amount = await screen.findByLabelText(/Amount to Redeem/i);
+    fireEvent.change(amount, { target: { value: "25" } });
+    fireEvent.click(screen.getByRole("button", { name: /Redeem Tokens/i }));
+
+    expect(await screen.findByText("Redeem failed")).toBeInTheDocument();
+    expect(amount).toHaveValue(25);
+  });
+});
