@@ -248,6 +248,7 @@ Veritoken/
 | [docs/storage-patterns.md](docs/storage-patterns.md) | Storage tier rationale and TTL bump map for every `DataKey` |
 | [docs/incident-response.md](docs/incident-response.md) | Operational runbook: pause, key rotation, compromised verifier, upgrade |
 | [docs/frontend-environment.md](docs/frontend-environment.md) | Reference for every frontend `VITE_*` variable: purpose, format, and which are required |
+| [docs/property-dividends.md](docs/property-dividends.md) | Dividend lifecycle for property tokens: holder prerequisites, distribution types, accrual, and claims |
 | [docs/glossary.md](docs/glossary.md) | Definitions of Veritoken terms: tiers, jurisdictions, verifiers, lockups, retirement receipts, dividend index |
 | [docs/troubleshooting.md](docs/troubleshooting.md) | Common problems and fixes for contributors and operators |
 | [docs/examples/](docs/examples/) | Language-specific integration examples (Python, JavaScript) |
