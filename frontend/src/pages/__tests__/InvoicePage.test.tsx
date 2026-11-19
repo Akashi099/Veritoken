@@ -138,6 +138,38 @@ describe("InvoicePage – issue form accessibility", () => {
   });
 });
 
+describe("InvoicePage – numeric error placement (issue #1070)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("attaches the whole-stroop error to the amount input instead of a toast", async () => {
+    const issueMock = vi.mocked(contracts.invoice.issue);
+    renderInvoicePage();
+    const amount = await screen.findByLabelText(/^Amount \(stroops\)/i);
+
+    // "1.5" passes the generic amount validator but is not a whole stroop value.
+    fireEvent.change(amount, { target: { value: "1.5" } });
+    expect(amount).not.toHaveAttribute("aria-invalid");
+
+    fireEvent.submit(amount.closest("form")!);
+
+    await waitFor(() => {
+      expect(amount).toHaveAttribute("aria-invalid", "true");
+    });
+    const errorId = amount.getAttribute("aria-describedby");
+    expect(errorId).toBeTruthy();
+    const error = document.getElementById(errorId!);
+    expect(error).toHaveAttribute("role", "alert");
+    expect(error).toHaveTextContent(/whole number of stroops/i);
+    expect(issueMock).not.toHaveBeenCalled();
+
+    // Correcting the value clears the field-level error.
+    fireEvent.change(amount, { target: { value: "2" } });
+    expect(amount).not.toHaveAttribute("aria-invalid");
+  });
+});
+
 describe("InvoicePage – redeem form accessibility", () => {
   beforeEach(() => {
     vi.clearAllMocks();
