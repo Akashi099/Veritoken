@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { PageHeader, Card, Icon } from "../components/ui";
 import { CopyButton } from "../components/CopyButton";
 import { ContractForm } from "../components/ContractForm";
-import { DraftBanner } from "../components/DraftBanner";
+import { DraftBanner, DraftRestoredNotice } from "../components/DraftBanner";
 import { DEPLOY_PRESETS, isDeployReady, type AssetType } from "../lib/contractFactory";
 import { validateForm, isFormValid, emptyValues } from "../lib/formSchema";
 import { getDraft, saveDraft, discardDraft, type DraftEntry } from "../lib/drafts";
@@ -26,6 +26,8 @@ function AssetTab({ assetType }: { assetType: AssetType }) {
   // so these initializers naturally re-run per asset type.
   const [values, setValues] = useState<Record<string, string>>(() => emptyValues(preset.fields));
   const [draft, setDraft] = useState<DraftEntry | undefined>(() => getDraft(flow));
+  // The draft whose values are currently shown in the form (issue #1071).
+  const [restoredDraft, setRestoredDraft] = useState<DraftEntry | undefined>();
   const autosaveTimer = useRef<ReturnType<typeof setTimeout>>();
 
   // Debounced autosave of in-progress values, so the tab can be resumed later.
@@ -44,6 +46,7 @@ function AssetTab({ assetType }: { assetType: AssetType }) {
     if (draft && isStringRecord(draft.values)) {
       const resumedValues = draft.values;
       setValues((prev) => ({ ...prev, ...resumedValues }));
+      setRestoredDraft(draft);
     }
     setDraft(undefined);
   };
@@ -53,9 +56,13 @@ function AssetTab({ assetType }: { assetType: AssetType }) {
     setDraft(undefined);
   };
 
+  // Hides the "restored" notice only — the stored draft is left untouched.
+  const handleDismissRestored = () => setRestoredDraft(undefined);
+
   const handleCopy = () => {
     discardDraft(flow);
     setDraft(undefined);
+    setRestoredDraft(undefined);
   };
 
   const results = validateForm(preset.fields, values);
@@ -66,6 +73,9 @@ function AssetTab({ assetType }: { assetType: AssetType }) {
     <div style={styles.tabContent}>
       {draft && (
         <DraftBanner draft={draft} onResume={handleResume} onDiscard={handleDiscardDraft} />
+      )}
+      {restoredDraft && (
+        <DraftRestoredNotice draft={restoredDraft} onDismiss={handleDismissRestored} />
       )}
       <p className="muted" style={{ marginBottom: "1.5rem" }}>
         {preset.description}
