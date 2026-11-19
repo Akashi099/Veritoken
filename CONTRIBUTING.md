@@ -124,6 +124,50 @@ errors only; it does not run the script or validate its logic.
 
 ---
 
+## Checking Documentation Links
+
+The repository does not run an automated Markdown link checker in CI. When you
+change a Markdown file, check the relative links it contains by hand, using
+this procedure (no extra tools required).
+
+1. List the Markdown files you changed:
+
+   ```bash
+   git diff --name-only --diff-filter=d origin/main -- '*.md'
+   ```
+
+2. For each file, list its relative links. External `http(s)://` and
+   `mailto:` links and bare `#anchor` links are skipped:
+
+   ```bash
+   file=docs/troubleshooting.md   # replace with a changed file
+   grep -oE '\]\([^)]+\)' "$file" \
+     | sed -E 's/^\]\(//; s/\)$//' \
+     | grep -vE '^(https?:|mailto:|#)' \
+     | sed -E 's/#.*$//' \
+     | sort -u
+   ```
+
+3. Confirm each target exists, resolved relative to the file's directory.
+   Paths that begin with `/` are relative to the repository root:
+
+   ```bash
+   dir=$(dirname "$file")
+   grep -oE '\]\([^)]+\)' "$file" | sed -E 's/^\]\(//; s/\)$//' \
+     | grep -vE '^(https?:|mailto:|#)' | sed -E 's/#.*$//' | sort -u \
+     | while read -r target; do
+         [ -z "$target" ] && continue
+         case "$target" in /*) path=".${target}" ;; *) path="$dir/$target" ;; esac
+         [ -e "$path" ] || echo "broken: $file -> $target"
+       done
+   ```
+
+   No output means every relative link in that file resolves. Anchors
+   (`#section`) are not verified; check them by hand when you rename a heading.
+
+Only check the links in pages you touched. Do not fix unrelated broken links
+in the same pull request unless you were asked to.
+
 ## Contract Size Budget
 
 Every contract in this repository has a documented maximum WASM binary size.
