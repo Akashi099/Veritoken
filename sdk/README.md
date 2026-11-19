@@ -258,6 +258,36 @@ await kyc.approve(verifierAddress, subjectAddress, /* tier */ 1, /* expiry */ 0n
 In most applications you won't construct clients directly — use
 `createClients` / `ClientFactory` above instead.
 
+## Working with token amounts (`bigint`)
+
+Token amounts, balances, supplies and dividends are typed as JavaScript
+`bigint` (for example `balance()`, `totalSupply()`, `pendingDividend()` and the
+`amount` fields in `types.ts`). Keep them as `bigint` until the last step.
+Converting them to `number` silently loses precision above
+`Number.MAX_SAFE_INTEGER` (about 9e15).
+
+- **Arithmetic:** use `bigint` operators and `n` literals (`100n`). Do not mix
+  them with `number` values; that throws a `TypeError`.
+- **Display:** convert with `toString()` for raw smallest units. For a value
+  with decimals, use the frontend helper
+  [`formatTokenAmount`](../frontend/src/lib/numericFormat.ts), or format it
+  yourself from the string without going through `Number`.
+- **JSON:** `JSON.stringify` throws on `bigint` by default. Export amounts as
+  strings with a replacer, and restore them with `BigInt(...)` on import:
+
+```ts
+const replacer = (_key: string, value: unknown) =>
+  typeof value === "bigint" ? value.toString() : value;
+
+const json = JSON.stringify({ balance: await rwa.balance(address) }, replacer);
+// {"balance":"1000000000"}
+
+const restored = BigInt(JSON.parse(json).balance); // 1000000000n
+```
+
+Avoid `Number(amount)`, `parseFloat(amount)` and `amount * 1.0` for amounts.
+They can round silently.
+
 ## Error handling
 
 Every contract emits numeric `#[contracterror]` codes. `errors.ts` gives you
