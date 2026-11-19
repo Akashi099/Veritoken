@@ -37,6 +37,24 @@ const KYC_TIER_LABELS: Record<number, string> = {
   2: "Institutional",
 };
 
+/**
+ * Helper text for the property share quantity field.
+ *
+ * The property-token contract mints whole VTPROP tokens (`decimals() == 0`),
+ * where each token is one share out of the fixed `total_shares`. The hint
+ * deliberately avoids implying a percentage or a currency amount.
+ */
+export function propertyShareHint(totalShares: bigint | number | null): string {
+  const supply =
+    totalShares !== null && totalShares !== undefined
+      ? ` of the ${Number(totalShares).toLocaleString()} total shares`
+      : " of the property's fixed total shares";
+  return (
+    `Number of whole VTPROP tokens to mint (no decimals). ` +
+    `Each token is 1 share${supply}; this is a token count, not a percentage or a USD amount.`
+  );
+}
+
 export default function PropertyPage() {
   const { connected, address, signTx } = useWallet();
   const { addToast } = useToast();
@@ -413,6 +431,7 @@ export default function PropertyPage() {
                 onChange={(e) => setMintShares(e.target.value)}
                 required
                 error={mintSharesValidation.error}
+                hint={propertyShareHint(totalShares ?? meta?.total_shares ?? null)}
               />
               <button
                 type="submit"
