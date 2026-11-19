@@ -15,6 +15,7 @@ import type { ProviderType, WalletProvider } from "../lib/walletProvider";
 import { WalletConnectProvider } from "../lib/walletProvider";
 import { NETWORK_PASSPHRASE } from "../lib/stellar";
 import WalletSelectorModal from "./WalletSelectorModal";
+import { describeWalletError } from "../lib/walletErrors";
 
 export default function WalletGuard({
   children,
@@ -74,7 +75,9 @@ export default function WalletGuard({
         }
       } catch (err: unknown) {
         setWcUri(null);
-        setConnectError(err instanceof Error ? err.message : "Connection failed.");
+        // Keep the raw error for developers; show only the user-safe message.
+        console.error("[wallet] connection failed", type, err);
+        setConnectError(describeWalletError(err));
       } finally {
         setConnectingType(null);
       }
