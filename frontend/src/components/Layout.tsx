@@ -1,6 +1,7 @@
 import { useState, useEffect, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useWallet } from "../lib/wallet";
+import { WalletStatus } from "./WalletStatus";
 import { useNetworkStore, type Network } from "../lib/networkStore";
 import { useRoleStore, type UserRole } from "../lib/roleStore";
 import { NotificationCenter } from "./NotificationCenter";
@@ -137,7 +138,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             {connected ? (
               <div style={styles.walletInfo}>
                 <span style={styles.address} className="mono" data-testid="wallet-address">
-                  <span className="dot" />
+                  <WalletStatus status="connected" />
                   {address?.slice(0, 4)}…{address?.slice(-4)}
                   {role && role !== "user" && (
                     <span
@@ -162,7 +163,10 @@ export default function Layout({ children }: { children: ReactNode }) {
                 </button>
               </div>
             ) : (
-              <button onClick={connect}>Connect Wallet</button>
+              <>
+                <WalletStatus status="disconnected" />
+                <button onClick={connect}>Connect Wallet</button>
+              </>
             )}
             <NotificationCenter />
             <button

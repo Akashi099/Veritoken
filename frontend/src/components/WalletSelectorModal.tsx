@@ -240,6 +240,10 @@ function ProviderCard({ meta, available, connecting, onSelect }: ProviderCardPro
         >
           {meta.description}
         </div>
+        {/* Availability as text, not only opacity (issue #1072). */}
+        {loading && <span className="sr-only">Checking availability</span>}
+        {available === true && !connecting && <span className="sr-only">Available</span>}
+        {connecting && <span className="sr-only">Connecting</span>}
         {available === false && (
           <div
             role="status"
