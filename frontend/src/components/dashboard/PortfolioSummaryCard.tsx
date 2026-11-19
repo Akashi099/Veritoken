@@ -5,6 +5,7 @@
 
 import { Component, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { Card, Skeleton } from "../ui";
 import { contracts } from "../../lib/contracts/index";
@@ -173,7 +174,19 @@ function PortfolioSummaryCardInner({ walletAddress }: Props) {
         ))}
       </div>
 
-      {pieData.length > 0 ? (
+      {totalPositions === 0 ? (
+        <div>
+          <p style={{ fontSize: "0.9rem", fontWeight: 600, marginBottom: "0.3rem" }}>
+            No token positions yet
+          </p>
+          <p className="muted" style={{ fontSize: "0.875rem" }}>
+            This wallet does not hold any invoice, property, or carbon tokens.{" "}
+            <Link to="/invoices">Invoices</Link>,{" "}
+            <Link to="/property">Property</Link>, and{" "}
+            <Link to="/carbon">Carbon</Link> pages show what you can hold.
+          </p>
+        </div>
+      ) : (
         <div
           role="img"
           aria-label={`Portfolio breakdown: ${pieData.map((d) => `${d.name} ${d.value}`).join(", ")}`}
@@ -202,10 +215,6 @@ function PortfolioSummaryCardInner({ walletAddress }: Props) {
             </PieChart>
           </ResponsiveContainer>
         </div>
-      ) : (
-        <p className="muted" style={{ fontSize: "0.875rem" }}>
-          No token positions found for this wallet.
-        </p>
       )}
     </Card>
   );
