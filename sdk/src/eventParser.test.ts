@@ -161,6 +161,21 @@ describe("parseEvent — unknown events", () => {
     // Raw data is preserved for the caller to interpret.
     expect(e!.data).toBe(42);
   });
+
+  it("does not throw for a malformed topic[0] that is not a Symbol (u32 instead)", () => {
+    // Malformed RPC data: the event-name topic decodes to a u32, not a Symbol.
+    // No decoder is registered for that value, so the parser should fall back
+    // to an unknown event with the raw data instead of crashing the caller.
+    const malformed = rawEvent([], nativeToScVal(7n, { type: "i128" }), {
+      topic: [nativeToScVal(42, { type: "u32" })],
+    });
+
+    expect(() => parseEvent(malformed)).not.toThrow();
+    const e = parseEvent(malformed);
+    expect(e).not.toBeNull();
+    expect(e!.known).toBe(false);
+    expect(e!.data).toBe(7n);
+  });
 });
 
 describe("parseEvent — empty topics", () => {
