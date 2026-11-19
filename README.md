@@ -245,6 +245,7 @@ Veritoken/
 | [docs/mainnet-deployment.md](docs/mainnet-deployment.md) | Step-by-step mainnet deployment with production checklist |
 | [docs/storage-patterns.md](docs/storage-patterns.md) | Storage tier rationale and TTL bump map for every `DataKey` |
 | [docs/incident-response.md](docs/incident-response.md) | Operational runbook: pause, key rotation, compromised verifier, upgrade |
+| [docs/glossary.md](docs/glossary.md) | Definitions of Veritoken terms: tiers, jurisdictions, verifiers, lockups, retirement receipts, dividend index |
 | [docs/troubleshooting.md](docs/troubleshooting.md) | Common problems and fixes for contributors and operators |
 | [docs/examples/](docs/examples/) | Language-specific integration examples (Python, JavaScript) |
 | [docs/community-showcase.md](docs/community-showcase.md) | Community integrations, extensions, and reference implementations built on Veritoken |

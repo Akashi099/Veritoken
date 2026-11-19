@@ -1,0 +1,111 @@
+# Glossary
+
+Plain-language definitions of terms that are specific to Veritoken and its Soroban contracts. Each entry links to the canonical reference for the term. Where a term has no dedicated page, the entry points to the contract source.
+
+---
+
+## Compliance and identity
+
+**Verifier**
+An address approved by the KYC registry admin to approve, renew, reject, revoke, or update the tier of a subject. A verifier is separate from an admin: admin membership does not grant verifier rights, and a verifier cannot manage verifiers unless it also holds the admin role.
+See [contract-api-reference.md — KYC Registry, Roles and authorization](contract-api-reference.md#kyc-registry) and `contracts/kyc-registry/src/lib.rs`.
+
+**KYC (Know Your Customer) record**
+The registry entry for one address. It stores the subject's status, tier, jurisdiction, verifier, and expiry.
+See [contract-api-reference.md — KYC Registry, Data structures](contract-api-reference.md#kyc-registry).
+
+**Tier**
+A numeric KYC level assigned to a holder when approved. The defined levels are `0` Basic, `1` Accredited, and `2` Institutional. Compliance rules can require a minimum tier for a sender, a recipient, or a property token shareholder.
+See [tier-based-compliance.md — Overview](tier-based-compliance.md#overview).
+
+**Jurisdiction**
+The country code recorded on a KYC record, in ISO-3166-1 alpha-2 format (for example `US` or `GB`). The compliance engine can block transfers by jurisdiction and can require that both parties share one.
+See [contract-api-reference.md — KYC Registry, Data structures](contract-api-reference.md#kyc-registry) and `contracts/kyc-registry/src/test.rs` for the accepted input.
+
+**Blocklist**
+A set of addresses the compliance engine refuses to send to or receive from. Blocklisted addresses cannot be added to the allowlist.
+See [contract-api-reference.md — Compliance Engine](contract-api-reference.md#compliance-engine).
+
+**Allowlist**
+The set of addresses cleared to transfer. An allowlisted address cannot also be on the blocklist.
+See [contract-api-reference.md — Compliance Engine](contract-api-reference.md#compliance-engine).
+
+**Tier policy**
+A rule that limits transfers by the sender's and recipient's tiers, keyed by `(from_tier, to_tier)`. The most restrictive limit between the tier policy and the global rules applies.
+See [tier-based-compliance.md — Policy Model](tier-based-compliance.md#policy-model).
+
+**Lockup (holding period)**
+A rule that controls how long an address must hold a token before it can transfer out (`min_holding_period`), and how long it may hold before it must transfer out (`max_holding_period`). The compliance engine reports the status for an address as a `LockupStatus`. A value of `0` means the rule is disabled.
+See [contract-api-reference.md — Compliance Engine, Data structures](contract-api-reference.md#compliance-engine) and `contracts/compliance-engine/src/lib.rs` (`LockupStatus`).
+
+**Compliance engine**
+The contract that applies transfer rules before any balance changes: size limits, holding periods, blocklist, pause, and tier policies. Asset tokens call it through `can_transfer`.
+See [README.md — Compliance is enforced at the protocol level](../README.md#compliance-is-enforced-at-the-protocol-level).
+
+---
+
+## Asset lifecycle
+
+**Asset token**
+A token contract that represents a real-world asset: an invoice, a property share, or a carbon credit. Each asset token type has its own reference page.
+See [contract-api-reference.md](contract-api-reference.md).
+
+**Settlement**
+For an invoice token, the payment step that closes the invoice. Settlement and redemption are different steps, and the contract treats them separately.
+See [contract-api-reference.md — Invoice Token, Terminology](contract-api-reference.md#invoice-token).
+
+**Redemption (burn)**
+For an invoice token, the step that removes redeemed tokens from circulation.
+See [contract-api-reference.md — Invoice Token, Terminology](contract-api-reference.md#invoice-token).
+
+**Buyback**
+An admin-initiated redemption of shares from a property-token holder.
+See [contract-api-reference.md — Property Token, Methods](contract-api-reference.md#property-token).
+
+**Forced transfer**
+An admin-initiated transfer of shares between holders, used for regulatory actions such as AML or court orders. Only the admin can call it.
+See [contract-api-reference.md — Property Token, Methods](contract-api-reference.md#property-token).
+
+**Retirement receipt**
+An on-chain record created when carbon credits are permanently retired. It stores the amount, the retirement reason, and the optional beneficiary. Retired credits leave circulation.
+See [carbon-credit-token.md](carbon-credit-token.md) and `contracts/carbon-credit-token/src/lib.rs` (`RetirementReceipt`).
+
+**Beneficiary**
+The address recorded on a retirement receipt as the party the retirement is for. It is optional.
+See [carbon-credit-token.md](carbon-credit-token.md).
+
+---
+
+## Dividends
+
+**Dividend index**
+A running per-share total, stored in fixed-point form with a scale factor of 10^7. Each deposit adds `amount × SCALE_FACTOR / total_shares` to the index. A holder's entitlement is the change in the index over the time they held their shares, so the contract does not loop over holders on each deposit.
+See `contracts/property-token/src/lib.rs` (`SCALE_FACTOR`, `deposit_dividend`) and [contract-api-reference.md — Property Token](contract-api-reference.md#property-token).
+
+**Distribution type**
+The category a dividend deposit is recorded under: `Rent` (`0`), `Capital` (`1`), or `Other` (`2`). Claims can be made for all types at once or for one type.
+See `contracts/property-token/src/lib.rs` (`DistributionType`).
+
+**Distribution checkpoint**
+An immutable accounting record for one dividend deposit, including the per-share amount and any rounding remainder.
+See `contracts/property-token/src/lib.rs` (`DistributionCheckpoint`).
+
+**Dust reserve**
+Stroops left over from per-share rounding. It is tracked separately and can be withdrawn by the admin.
+See `contracts/property-token/src/lib.rs` (`dust_reserve`, `collect_dust_reserve`).
+
+---
+
+## Deployment and tooling
+
+**Canonical manifest**
+The `deploy-manifest.json` file written by a deployment. It records the deployed contracts and is the input for the verification step, which checks deployed code hashes against it.
+See [deployment-automation.md](deployment-automation.md).
+
+**Standalone network**
+A local Stellar node started with `--standalone`. It is the default network for the Docker environment.
+See [docker-environment.md](docker-environment.md).
+
+**SEP-41**
+The Stellar token interface that the base `rwa-token` contract implements.
+See [contract-api-reference.md — RWA Token](contract-api-reference.md#rwa-token).
