@@ -53,10 +53,40 @@ interface CarbonSummary {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function PauseBadge({ paused }: { paused: boolean | null }) {
+/** Visible, colour-independent text for each pause state. */
+export const PAUSE_STATUS_TEXT = {
+  paused: "Paused",
+  active: "Active",
+  unknown: "Unknown",
+} as const;
+
+/** Accessible description for a pause state, optionally scoped to a contract. */
+export function describePauseState(paused: boolean | null, subject?: string): string {
+  const prefix = subject ? `${subject} pause status: ` : "Pause status: ";
+  if (paused === null) return `${prefix}unknown — state could not be read`;
+  return paused
+    ? `${prefix}paused — operations are halted`
+    : `${prefix}active — operations are running`;
+}
+
+export function PauseBadge({
+  paused,
+  subject,
+}: {
+  paused: boolean | null;
+  /** Name of the contract or system the badge describes. */
+  subject?: string;
+}) {
+  const state = paused === null ? "unknown" : paused ? "paused" : "active";
+  const description = describePauseState(paused, subject);
+
   if (paused === null) {
     return (
       <span
+        role="status"
+        aria-label={description}
+        title={description}
+        data-pause-state={state}
         style={{
           display: "inline-block",
           padding: "0.2rem 0.65rem",
@@ -68,7 +98,8 @@ function PauseBadge({ paused }: { paused: boolean | null }) {
           border: "1px solid var(--border)",
         }}
       >
-        —
+        <span aria-hidden="true">— </span>
+        {PAUSE_STATUS_TEXT.unknown}
       </span>
     );
   }
@@ -76,7 +107,9 @@ function PauseBadge({ paused }: { paused: boolean | null }) {
   return (
     <span
       role="status"
-      aria-label={paused ? "Paused" : "Active"}
+      aria-label={description}
+      title={description}
+      data-pause-state={state}
       style={{
         display: "inline-block",
         padding: "0.2rem 0.65rem",
@@ -88,7 +121,8 @@ function PauseBadge({ paused }: { paused: boolean | null }) {
         border: `1px solid ${paused ? "rgba(239,68,68,0.3)" : "rgba(52,211,153,0.3)"}`,
       }}
     >
-      {paused ? "⏸ Paused" : "▶ Active"}
+      <span aria-hidden="true">{paused ? "⏸ " : "▶ "}</span>
+      {paused ? PAUSE_STATUS_TEXT.paused : PAUSE_STATUS_TEXT.active}
     </span>
   );
 }
@@ -182,7 +216,7 @@ function ContractStatusRow({
         <span style={{ fontWeight: 600, fontSize: "0.9rem", minWidth: 160 }}>
           {signal.label}
         </span>
-        <PauseBadge paused={signal.paused} />
+        <PauseBadge paused={signal.paused} subject={signal.label} />
         {signal.error && (
           <span
             role="alert"
