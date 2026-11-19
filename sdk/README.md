@@ -231,6 +231,20 @@ table is the map, not the territory.
 | `PropertyTokenClient` | `property-token` | [src/clients/PropertyTokenClient.ts](src/clients/PropertyTokenClient.ts) | Fractional shares, `depositDividend`/`claimDividend`/`pendingDividend` |
 | `CarbonTokenClient` | `carbon-credit-token` | [src/clients/CarbonTokenClient.ts](src/clients/CarbonTokenClient.ts) | `mint`, `retire` (returns a `RetirementReceipt`), retirement history |
 
+### Smallest read-only call per client
+
+Each table row is one representative read. Reads simulate the call and decode
+the result, so none of them need a wallet signature or a transaction submission.
+
+| Client | Read call | Returns | Method reference |
+|---|---|---|---|
+| `KycRegistryClient` | `kyc.isApproved(address)` | `Promise<boolean>` | [isApproved](src/clients/KycRegistryClient.ts) |
+| `ComplianceEngineClient` | `engine.isBlocklisted(address)` | `Promise<boolean>` | [isBlocklisted](src/clients/ComplianceEngineClient.ts) |
+| `RwaTokenClient` | `rwa.balance(address)` | `Promise<bigint>` | [balance](src/clients/RwaTokenClient.ts) |
+| `InvoiceTokenClient` | `invoice.isSettled()` | `Promise<boolean>` | [isSettled](src/clients/InvoiceTokenClient.ts) |
+| `PropertyTokenClient` | `property.pendingDividend(holder)` | `Promise<bigint>` | [pendingDividend](src/clients/PropertyTokenClient.ts) |
+| `CarbonTokenClient` | `carbon.totalRetired()` | `Promise<bigint>` | [totalRetired](src/clients/CarbonTokenClient.ts) |
+
 ```ts
 import { KycRegistryClient, createServer, NETWORK_PASSPHRASES } from "@veritoken/sdk";
 
