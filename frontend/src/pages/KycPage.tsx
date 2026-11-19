@@ -157,6 +157,7 @@ export default function KycPage() {
               onChange={set("subject")}
               required
               placeholder="G…"
+              hint="Enter the investor's Stellar public address: 56 characters, starting with G (for example, G followed by 55 letters A–Z or digits 2–7)."
               error={subjectValidation.error}
             />
             <Select
