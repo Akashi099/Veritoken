@@ -214,3 +214,45 @@ describe("InvoicePage – form values after submission", () => {
     expect(amount).toHaveValue(25);
   });
 });
+
+describe("InvoicePage – pending action labels", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("shows action-specific pending text and blocks duplicate issue submissions", async () => {
+    let resolveIssue: () => void = () => {};
+    const issueMock = vi.mocked(contracts.invoice.issue);
+    issueMock.mockImplementationOnce(
+      () => new Promise<void>((resolve) => { resolveIssue = resolve; }),
+    );
+    renderInvoicePage();
+
+    fireEvent.change(await screen.findByLabelText(/^Amount \(stroops\)/i), {
+      target: { value: "500" },
+    });
+    const form = screen.getByRole("button", { name: /Issue Invoice Tokens/i }).closest("form")!;
+    fireEvent.submit(form);
+
+    const pendingButton = await screen.findByRole("button", { name: /Issuing invoice tokens/i });
+    expect(pendingButton).toBeDisabled();
+    expect(pendingButton).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByTestId("invoice-pending-status")).toHaveTextContent(
+      "Issuing invoice tokens, please wait.",
+    );
+    // Spinner is decorative and must not be the only cue.
+    expect(screen.getByTestId("spinner")).toHaveAttribute("aria-hidden", "true");
+
+    // A second submission while pending must not trigger another request.
+    fireEvent.submit(form);
+    fireEvent.click(pendingButton);
+    expect(issueMock).toHaveBeenCalledTimes(1);
+
+    resolveIssue();
+    expect(await screen.findByRole("button", { name: /Issue Invoice Tokens/i })).toHaveAttribute(
+      "aria-busy",
+      "false",
+    );
+    expect(screen.getByTestId("invoice-pending-status")).toHaveTextContent("");
+  });
+});
