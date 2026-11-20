@@ -780,3 +780,83 @@ fn regression_buyback_preserves_other_holders_accruals() {
     let bob_claimed = h.token.claim_dividend(&bob);
     assert_eq!(bob_claimed, 800); // 400 (round 1) + 400 (round 2)
 }
+
+// ── Regression: non-holder cannot claim a distribution it did not accrue ──────
+//
+// Dividend accounting must not create a claimable amount for an address that
+// held zero shares when a distribution was deposited.  A zero-balance address
+// must receive nothing, regardless of how many rounds the holder participated
+// in.
+
+/// An address that never held shares cannot claim any distribution.
+///
+/// Setup:
+///   - `alice` holds all shares and receives a distribution.
+///   - `stranger` holds zero shares throughout — it is never minted to and
+///     never receives a transfer.
+///
+/// Assert:
+///   - `stranger`'s pending dividend is 0 after the distribution.
+///   - Attempting to claim via `claim_dividend` returns 0 (the method returns
+///     the claimed amount; a zero-balance address accrues nothing so the
+///     contract returns 0 rather than panicking on the idempotent path).
+///   - `stranger` cannot receive any portion of `alice`'s accrued dividend:
+///     `alice` can still claim her full entitlement after the stranger's
+///     zero-claim attempt.
+#[test]
+fn regression_non_holder_cannot_claim_distribution() {
+    let h = setup(1_000);
+    let alice = h.new_holder();
+    let stranger = h.new_holder(); // KYC-approved but never receives shares
+
+    // alice holds all 1 000 shares; stranger holds none.
+    h.token.mint(&alice, &1_000);
+    assert_eq!(h.token.balance(&alice), 1_000);
+    assert_eq!(h.token.balance(&stranger), 0);
+
+    // Distribute 1 000 stroops while only alice owns tokens.
+    h.token.deposit_dividend(&1_000, &DIST_OTHER);
+
+    // Stranger has no shares — no dividend should have accrued.
+    assert_eq!(
+        h.token.pending_dividend(&stranger),
+        0,
+        "zero-balance address must have zero pending dividend"
+    );
+
+    // A claim call from stranger must return 0 — the pool must not be debited.
+    let pool_before = h.token.dividend_pool();
+    let stranger_claimed = h.token.claim_dividend(&stranger);
+    assert_eq!(
+        stranger_claimed,
+        0,
+        "claim_dividend for a non-holder must return 0"
+    );
+    assert_eq!(
+        h.token.dividend_pool(),
+        pool_before,
+        "dividend pool must be unchanged after a zero-claim from a non-holder"
+    );
+
+    // alice's full entitlement must be intact — the stranger's claim attempt
+    // must not have consumed any of alice's accrued dividend.
+    assert_eq!(
+        h.token.pending_dividend(&alice),
+        1_000,
+        "holder's pending dividend must be unaffected by a non-holder claim attempt"
+    );
+    let alice_claimed = h.token.claim_dividend(&alice);
+    assert_eq!(
+        alice_claimed,
+        1_000,
+        "holder must still be able to claim her full entitlement"
+    );
+
+    // Pool is now fully drained (dust aside).
+    let dust = h.token.dust_reserve();
+    assert_eq!(
+        h.token.dividend_pool(),
+        dust,
+        "pool must equal dust reserve after all legitimate claims"
+    );
+}

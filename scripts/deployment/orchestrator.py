@@ -396,6 +396,11 @@ def verify_manifest(
     generated_at: str | None = None,
 ) -> dict[str, Any]:
     repo_root = repo_root.resolve()
+    if manifest.get("schema_version") != MANIFEST_SCHEMA_VERSION:
+        raise DeploymentError(
+            f"manifest schema_version {manifest.get('schema_version')!r} is not "
+            f"supported; expected schema_version {MANIFEST_SCHEMA_VERSION}"
+        )
     checks: list[dict[str, Any]] = []
     network_value = manifest.get("network")
     if not isinstance(network_value, dict):

@@ -268,6 +268,47 @@ dependencies, self-dependencies, and cycles are rejected before a deployment
 transaction. Resolved dependency IDs are stored in each contract record and
 checked again during verification.
 
+### Network-specific configuration fields
+
+The table below lists every field in the deployment config schema and whether
+its value should differ between testnet and mainnet. Fields marked
+**environment-dependent** must be reviewed before promoting a config from one
+environment to the other. Fields marked **shared** may be reused verbatim.
+
+Secret values (private keys, seed phrases, funded account addresses) must
+never appear in a config file — keep them in environment variables or the
+Stellar CLI key store. See [docs/secret-safe-deployment.md](secret-safe-deployment.md)
+and the [mainnet checklist](mainnet-deployment.md) before deploying to production.
+
+| Field | Scope | Environment-dependent? | Notes |
+|---|---|---|---|
+| `schema_version` | root | Shared | Must equal `1`; rejected if mismatched |
+| `profile` | root | **Yes** | `"development"` for testnet; `"production"` required for mainnet/public |
+| `contracts[].name` | contract | Shared | Stable contract identifier used in dependency references |
+| `contracts[].artifact` | contract | Shared | Template path; resolved at deploy time via `${wasm_dir}` |
+| `contracts[].env_key` | contract | Shared | Frontend env variable written to `frontend/.env` |
+| `contracts[].dependencies` | contract | Shared | Dependency names within the same config; order is derived automatically |
+| `contracts[].deployment_mode` | contract | Shared | `"constructor"` or `"initialize"`; fixed per contract type |
+| `contracts[].enabled` | contract | **Yes** | Omit or set `true` for production; use `false` only to skip a contract in one environment |
+| `contracts[].constructor_args` / `initialize_args` | contract | **Yes** | Contain environment-specific addresses (`${admin}`, `${contract.NAME}`) and tunable parameters (see below) |
+| `contracts[].declared_metadata` | contract | **Yes** | `"role"` is shared; `"fixture_*"` keys are testnet-only; `"release"` tag is mainnet-only |
+| `contracts[].health_check` | contract | Shared | Function name and expectation are shared; args using `${contract.NAME}` resolve per environment |
+| `initialize_args.rule_change_delay` | compliance_engine | **Yes** | `0` on testnet (instant rule changes for testing); `86400` (24 h) on mainnet |
+| `initialize_args.admin` | any `initialize` contract | **Yes** | Resolves to the deploying identity's public address via `${admin}`; differs per environment |
+| `constructor_args.admin` | any `constructor` contract | **Yes** | Same as above |
+| `constructor_args.meta.*` (invoice, property, carbon) | asset contracts | **Yes** | Testnet uses fixture values (`"VERITOKEN-TEST-…"`); mainnet requires real legal/project data with no placeholders |
+| `declared_metadata.release` | any contract (mainnet) | **Yes** | Set to the release tag (e.g. `"v1.0.0"`); mainnet placeholder gate rejects `<release-tag>` |
+| `declared_metadata.fixture_*` | asset contracts (testnet) | Testnet only | Drop entirely from mainnet configs |
+
+**Quick checklist when promoting testnet → mainnet:**
+
+1. Set `profile` to `"production"`.
+2. Replace every `"fixture_*"` metadata key with real values or remove it.
+3. Replace `<release-tag>` in `declared_metadata.release` with the actual release tag.
+4. Set `rule_change_delay` in compliance_engine `initialize_args` to `86400` (or your governance-approved value).
+5. Set `enabled: false` (or remove) any contracts that are not part of this release.
+6. Run `python3 scripts/deployment_cli.py plan --config … --network mainnet` to catch remaining placeholders before submitting any transaction.
+
 ### Mainnet profile
 
 Mainnet aliases (`mainnet` and `public`) require a configuration whose
