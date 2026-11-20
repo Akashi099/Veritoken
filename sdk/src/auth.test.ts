@@ -93,3 +93,33 @@ describe("withAuth", () => {
     await expect(withAuth("admin", ALICE, undefined, action)).rejects.toThrow("Insufficient token balance");
   });
 });
+
+describe("isValidAddress — whitespace handling", () => {
+  // The regex anchors (^ and $) make whitespace-padded strings fail the
+  // pattern match.  This documents the rejection behavior explicitly so
+  // integrators copying addresses from terminals or spreadsheets are not
+  // surprised by silent acceptance of an invalid address.
+
+  it("rejects an address with a single leading space", () => {
+    expect(isValidAddress(" " + ALICE)).toBe(false);
+  });
+
+  it("rejects an address with a single trailing space", () => {
+    expect(isValidAddress(ALICE + " ")).toBe(false);
+  });
+
+  it("rejects an address padded with multiple spaces on both sides", () => {
+    expect(isValidAddress("  " + ALICE + "  ")).toBe(false);
+  });
+
+  it("rejects an address with an internal tab character", () => {
+    // Tabs can appear when addresses are pasted from tab-separated exports.
+    expect(isValidAddress(ALICE.slice(0, 10) + "\t" + ALICE.slice(11))).toBe(false);
+  });
+
+  it("assertValidAddress throws AuthError for a leading-space address", () => {
+    // Confirms the validator is used at the write-method boundary — a
+    // whitespace-padded address cannot slip through into a contract call.
+    expect(() => assertValidAddress(" " + ALICE, "admin")).toThrow(AuthError);
+  });
+});

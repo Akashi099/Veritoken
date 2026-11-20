@@ -2978,3 +2978,45 @@ fn test_expiry_boundary_one_second_before_at_and_after() {
         "stored status must remain Approved (expiry is evaluated at query time)"
     );
 }
+
+// ── Duplicate verifier addition ───────────────────────────────────────────────
+
+/// `add_verifier` is idempotent: calling it twice with the same address does
+/// not error, does not duplicate the entry in the roster, and leaves the
+/// verifier count at 1.
+///
+/// The on-chain guard (`if !list.contains(&verifier)`) silently skips the
+/// second insertion, so callers should not rely on the call succeeding as
+/// evidence that the verifier was newly registered.
+#[test]
+fn test_add_verifier_duplicate_is_idempotent() {
+    let (env, client, admin) = setup();
+    let verifier = Address::generate(&env);
+
+    // First addition — verifier is new, should be accepted.
+    client.add_verifier(&admin, &verifier);
+    assert_eq!(client.verifier_count(), 1);
+
+    // Second addition of the same address — must not error.
+    client.add_verifier(&admin, &verifier);
+
+    // Count must remain 1: the duplicate was silently skipped, not appended.
+    assert_eq!(
+        client.verifier_count(),
+        1,
+        "verifier count must not increase after a duplicate add_verifier call"
+    );
+
+    // The verifier still appears exactly once in the public roster.
+    let roster = client.verifier_list_pub();
+    let occurrences = roster.iter().filter(|v| v == verifier).count();
+    assert_eq!(
+        occurrences, 1,
+        "verifier must appear exactly once in the roster after two add_verifier calls"
+    );
+
+    // The verifier is still active and can approve a subject.
+    let subject = Address::generate(&env);
+    client.approve(&verifier, &subject, &1, &0, &js(&env, "US"));
+    assert!(client.is_approved(&subject));
+}

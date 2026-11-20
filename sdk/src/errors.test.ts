@@ -263,3 +263,39 @@ describe("formatContractError", () => {
     expect(invoiceErr).toContain("InvoiceAlreadySettled");
   });
 });
+
+describe("lookupError — unknown code fallback", () => {
+  it("returns null for a code not in the kyc contract table", () => {
+    // Code 999 does not exist in the KYC registry error table.
+    // null is the explicit signal that the code is unrecognised —
+    // callers must not infer a false known cause from the result.
+    const result = lookupError("kyc", 999);
+    expect(result).toBeNull();
+  });
+
+  it("returns null for a code not in the rwa contract table", () => {
+    // RWA errors are defined up to code 33; code 100 is unknown.
+    // The null return preserves the numeric code implicitly (via the
+    // absence of a named error) so an operator knows what to look for.
+    const result = lookupError("rwa", 100);
+    expect(result).toBeNull();
+  });
+
+  it("parseContractError produces a fallback that preserves code and contract context for unknown codes", () => {
+    // An unrecognised code from a future contract version must not crash
+    // or return null — the fallback object keeps the numeric code and the
+    // contract name so an operator can correlate the error without a known
+    // name mapping.
+    const result = parseContractError("kyc", "Error(Contract, #999)");
+
+    expect(result).not.toBeNull();
+    // The numeric code is intact.
+    expect(result!.code).toBe(999);
+    // The name signals unknown rather than implying a false known cause.
+    expect(result!.name).toBe("UnknownContractError");
+    // The message contains the numeric code and the contract name so an
+    // operator can investigate without additional context.
+    expect(result!.message).toContain("999");
+    expect(result!.message).toContain("kyc");
+  });
+});
