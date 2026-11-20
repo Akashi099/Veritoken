@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import contextlib
 import copy
+import io
 import unittest
 from typing import Any
 
-from deployment.cli import validate_manifest_structure
+from deployment.cli import build_parser, validate_manifest_structure
 from deployment.models import DeploymentError
 
 SENSITIVE_VALUE = "SDO-NOT-ECHO-THIS-VALUE"
@@ -79,6 +81,50 @@ class ValidateManifestStructureTest(unittest.TestCase):
                 with self.assertRaises(DeploymentError) as ctx:
                     validate_manifest_structure(manifest)
                 self.assertNotIn(SENSITIVE_VALUE, str(ctx.exception))
+
+
+class CliUsageTest(unittest.TestCase):
+    """The help / no-argument output is the operator-facing command surface.
+
+    These tests assert only that every supported command *name* appears in the
+    output, never the surrounding whitespace or argparse terminal formatting
+    (which varies by terminal width). No deployment configuration or
+    credentials are needed: the parser is exercised directly as a fixture.
+    """
+
+    SUPPORTED_COMMANDS = (
+        "deploy",
+        "verify",
+        "plan",
+        "validate-manifest",
+        "simulate-upgrade",
+    )
+
+    def test_help_lists_supported_commands(self) -> None:
+        parser = build_parser()
+        out = io.StringIO()
+        with self.assertRaises(SystemExit) as ctx:
+            with contextlib.redirect_stdout(out):
+                parser.parse_args(["--help"])
+
+        # ``--help`` is a successful, intentional exit.
+        self.assertEqual(ctx.exception.code, 0)
+        output = out.getvalue()
+        for command in self.SUPPORTED_COMMANDS:
+            self.assertIn(command, output)
+
+    def test_no_command_prints_usage_and_fails(self) -> None:
+        parser = build_parser()
+        out = io.StringIO()
+        with self.assertRaises(SystemExit) as ctx:
+            with contextlib.redirect_stderr(out):
+                parser.parse_args([])
+
+        # Missing the required subcommand is a usage error.
+        self.assertEqual(ctx.exception.code, 2)
+        output = out.getvalue()
+        for command in self.SUPPORTED_COMMANDS:
+            self.assertIn(command, output)
 
 
 if __name__ == "__main__":

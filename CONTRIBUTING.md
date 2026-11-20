@@ -68,6 +68,7 @@ credentials or a funded account.
 | Property-based fuzz tests | Integration | repo root | `cargo test -p fuzz-tests --features testutils` |
 | Dividend regression tests | Integration | repo root | `cargo test -p dividend-regression-tests --features testutils` |
 | SDK | Unit | `sdk/` | `npm test` |
+| SDK (from repo root) | Unit | repo root | `npm run test:sdk` |
 | Frontend (all) | Unit | `frontend/` | `npm test` |
 | Frontend (one file) | Unit | `frontend/` | `npx vitest run src/lib/__tests__/drafts.test.ts` |
 | Integration fixtures (no network) | Unit | `tests/integration/` | `npm run test:unit` |

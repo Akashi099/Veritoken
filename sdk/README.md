@@ -22,6 +22,7 @@ For runnable, end-to-end examples (including this SDK vs. raw JS/Python), see
 - [Retries and timeouts](#retries-and-timeouts)
 - [Event parsing](#event-parsing)
 - [Auth helpers](#auth-helpers)
+- [Running the SDK tests](#running-the-sdk-tests)
 - [Testing your integration](#testing-your-integration)
 - [Adding a new contract client](#adding-a-new-contract-client)
 
@@ -450,6 +451,24 @@ clear `AuthError` instead of a slow simulate-then-fail round trip. On-chain
 `require_auth()` enforcement is unchanged either way — this only saves a
 round trip. See [src/auth.ts](src/auth.ts) if you're wiring up a similar
 pattern for a new gated method.
+
+## Running the SDK tests
+
+The SDK test suite (`vitest run`) can be invoked two ways — both run the
+same tests, so pick the one matching your working directory:
+
+```bash
+# From the repository root (npm workspace selector)
+npm run test:sdk
+
+# From inside the sdk/ directory (package-local command)
+npm test
+```
+
+`npm run test:sdk` is the root-level convenience script in the repo-root
+`package.json` — it runs `npm --workspace sdk run test`, mirroring the
+existing `build:sdk` script. Run it from the repository root.
+`npm test` is the package-local command, run from `sdk/`.
 
 ## Testing your integration
 
