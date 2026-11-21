@@ -109,6 +109,16 @@ describe("KycPage – approve form", () => {
     expect((btn as HTMLButtonElement).disabled).toBe(false);
   });
 
+  it("explains the expected Stellar public address format next to the subject field", () => {
+    renderKycPage();
+    const subjectInput = screen.getAllByRole("textbox").find(
+      (el) => (el as HTMLInputElement).placeholder === "G…",
+    );
+    if (!subjectInput) throw new Error("subject input not found");
+    const hint = screen.getByText(/Stellar public address: 56 characters/i);
+    expect(subjectInput.getAttribute("aria-describedby")).toContain(hint.id);
+  });
+
   it("renders three tier options", () => {
     renderKycPage();
     const select = screen.getByRole("combobox");

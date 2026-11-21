@@ -132,6 +132,23 @@ describe("PortfolioSummaryCard", () => {
       expect(screen.getByText("1")).toBeInTheDocument();
     });
   });
+
+  it("shows a descriptive empty state when every balance is zero", async () => {
+    mockContracts.invoice.balance.mockResolvedValue(0n);
+    mockContracts.property.balance.mockResolvedValue(0n);
+    mockContracts.carbon.balance.mockResolvedValue(0n);
+
+    render(
+      <PortfolioSummaryCard walletAddress="GABCDEFGHIJKLMNOPQRSTUVWXYZ234567ABCDEFGHIJKLMNOPQRSTUVWX" />,
+      { wrapper }
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("No token positions yet")).toBeInTheDocument();
+    });
+    expect(screen.getByRole("link", { name: "Invoices" })).toHaveAttribute("href", "/invoices");
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+  });
 });
 
 // ── KycExpiryPanel ────────────────────────────────────────────────────────────

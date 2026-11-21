@@ -124,6 +124,50 @@ errors only; it does not run the script or validate its logic.
 
 ---
 
+## Checking Documentation Links
+
+The repository does not run an automated Markdown link checker in CI. When you
+change a Markdown file, check the relative links it contains by hand, using
+this procedure (no extra tools required).
+
+1. List the Markdown files you changed:
+
+   ```bash
+   git diff --name-only --diff-filter=d origin/main -- '*.md'
+   ```
+
+2. For each file, list its relative links. External `http(s)://` and
+   `mailto:` links and bare `#anchor` links are skipped:
+
+   ```bash
+   file=docs/troubleshooting.md   # replace with a changed file
+   grep -oE '\]\([^)]+\)' "$file" \
+     | sed -E 's/^\]\(//; s/\)$//' \
+     | grep -vE '^(https?:|mailto:|#)' \
+     | sed -E 's/#.*$//' \
+     | sort -u
+   ```
+
+3. Confirm each target exists, resolved relative to the file's directory.
+   Paths that begin with `/` are relative to the repository root:
+
+   ```bash
+   dir=$(dirname "$file")
+   grep -oE '\]\([^)]+\)' "$file" | sed -E 's/^\]\(//; s/\)$//' \
+     | grep -vE '^(https?:|mailto:|#)' | sed -E 's/#.*$//' | sort -u \
+     | while read -r target; do
+         [ -z "$target" ] && continue
+         case "$target" in /*) path=".${target}" ;; *) path="$dir/$target" ;; esac
+         [ -e "$path" ] || echo "broken: $file -> $target"
+       done
+   ```
+
+   No output means every relative link in that file resolves. Anchors
+   (`#section`) are not verified; check them by hand when you rename a heading.
+
+Only check the links in pages you touched. Do not fix unrelated broken links
+in the same pull request unless you were asked to.
+
 ## Contract Size Budget
 
 Every contract in this repository has a documented maximum WASM binary size.
@@ -146,6 +190,26 @@ See [docs/contract-size-budget.md](docs/contract-size-budget.md) for the full
 policy, current limits, and reduction techniques.
 
 ---
+
+## Documentation Maintenance Checklist
+
+When your change touches the items below, update only the documents listed
+next to it. Do not edit unrelated pages just because they mention the same
+area.
+
+| If you change… | Check these canonical documents |
+| --- | --- |
+| Contract public functions, signatures, or errors | [docs/contract-api-reference.md](docs/contract-api-reference.md), [CHANGELOG.md](CHANGELOG.md) |
+| Contract storage keys or layout | [docs/storage-layout.md](docs/storage-layout.md), [docs/storage-patterns.md](docs/storage-patterns.md) |
+| Contract WASM size or budgets | [docs/contract-size-budget.md](docs/contract-size-budget.md) |
+| SDK API or usage | [sdk/README.md](sdk/README.md), [sdk/VERSIONING.md](sdk/VERSIONING.md) |
+| Frontend env variables or setup | [CONTRIBUTING.md](CONTRIBUTING.md) (Frontend setup), [README.md](README.md) |
+| Deployment scripts or steps | [docs/deployment-automation.md](docs/deployment-automation.md), [docs/mainnet-deployment.md](docs/mainnet-deployment.md), [deployment/scripts/README.md](deployment/scripts/README.md) |
+| Test commands or test suites | [CONTRIBUTING.md](CONTRIBUTING.md) (Test commands by area), [tests/integration/README.md](tests/integration/README.md), [tests/e2e/README.md](tests/e2e/README.md) |
+| Security-sensitive logic (auth, transfers, storage) | [docs/security-checklist.md](docs/security-checklist.md) |
+| Common failures or fixes | [docs/troubleshooting.md](docs/troubleshooting.md) |
+
+Update only the rows that your change affects.
 
 ## Good First Issues
 
