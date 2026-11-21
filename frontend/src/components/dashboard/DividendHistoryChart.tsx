@@ -3,7 +3,7 @@
  * Issue #547
  */
 
-import { Component, useState, type ReactNode } from "react";
+import { Component, useId, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -93,10 +93,42 @@ function toChartPoints(
     }));
 }
 
+/**
+ * Builds a concise, screen-reader friendly summary of the plotted points.
+ * Derived from the same data the chart renders so values never diverge.
+ */
+export function summarizeDividendPoints(points: ChartPoint[], range: Range): string {
+  const rangeLabel = range === "90d" ? "the last 90 days" : "all time";
+  if (points.length === 0) {
+    return `No dividend distributions for ${rangeLabel}.`;
+  }
+  const sorted = [...points].sort((a, b) => a.ts - b.ts);
+  const total = sorted.reduce((sum, p) => sum + p.amount, 0);
+  const highest = sorted.reduce((max, p) => (p.amount > max.amount ? p : max), sorted[0]);
+  const first = sorted[0];
+  const latest = sorted[sorted.length - 1];
+  const plural = sorted.length === 1 ? "distribution" : "distributions";
+  const span =
+    sorted.length === 1
+      ? `on ${first.dateLabel}`
+      : `from ${first.dateLabel} to ${latest.dateLabel}`;
+  const parts = [
+    `${sorted.length} dividend ${plural} for ${rangeLabel}, ${span}.`,
+    `Total ${total.toLocaleString()} stroops.`,
+    `Latest ${latest.amount.toLocaleString()} stroops on ${latest.dateLabel}.`,
+    `Highest ${highest.amount.toLocaleString()} stroops on ${highest.dateLabel}.`,
+  ];
+  if (sorted.some((p) => p.unclaimed)) {
+    parts.push("You have unclaimed dividends.");
+  }
+  return parts.join(" ");
+}
+
 // ── Inner component ───────────────────────────────────────────────────────────
 
 function DividendHistoryChartInner({ walletAddress }: Props) {
   const [range, setRange] = useState<Range>("all");
+  const summaryId = useId();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["dividendHistory", walletAddress],
@@ -179,6 +211,7 @@ function DividendHistoryChartInner({ walletAddress }: Props) {
         <div
           role="img"
           aria-label={`Dividend history chart with ${points.length} data points`}
+          aria-describedby={summaryId}
           style={{ width: "100%", height: 200 }}
         >
           <ResponsiveContainer width="100%" height="100%">
@@ -219,6 +252,12 @@ function DividendHistoryChartInner({ walletAddress }: Props) {
             </AreaChart>
           </ResponsiveContainer>
         </div>
+      )}
+
+      {points.length > 0 && (
+        <p id={summaryId} className="sr-only" data-testid="dividend-chart-summary">
+          {summarizeDividendPoints(points, range)}
+        </p>
       )}
 
       {pendingDps > 0n && (

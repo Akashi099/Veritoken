@@ -322,6 +322,19 @@ describe("ComplianceAlertTimeline", () => {
     const items = screen.getAllByRole("listitem");
     expect(items).toHaveLength(50);
   });
+
+  it("exposes an accessible name and severity summary for the timeline", () => {
+    const { push } = useNotificationStore.getState();
+    push({ title: "Low tier", message: "m", severity: "warning", category: "compliance" });
+    push({ title: "Frozen", message: "m", severity: "critical", category: "compliance" });
+
+    render(<ComplianceAlertTimeline />, { wrapper });
+
+    const timeline = screen.getByRole("list", { name: /compliance alert timeline/i });
+    expect(timeline).toHaveAccessibleDescription(
+      /2 compliance alerts: 1 critical, 1 warning\. Most recent: Frozen/i,
+    );
+  });
 });
 
 // ── DividendHistoryChart ──────────────────────────────────────────────────────
@@ -370,6 +383,31 @@ describe("DividendHistoryChart", () => {
         screen.getByRole("img", { name: /dividend history chart with 2 data points/i })
       ).toBeInTheDocument();
     });
+  });
+
+  it("describes the chart with a summary derived from the displayed data", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    mockContracts.property.dividendDepositCount.mockResolvedValue(2);
+    mockContracts.property.getDividendHistory.mockResolvedValue([
+      { amount: 1000n, timestamp: now - 86400, running_total_dps: 1000n, distribution_type: 0 },
+      { amount: 2000n, timestamp: now - 172800, running_total_dps: 3000n, distribution_type: 0 },
+    ]);
+    mockContracts.property.pendingDividend.mockResolvedValue(0n);
+
+    render(
+      <DividendHistoryChart walletAddress="GABCDEFGHIJKLMNOPQRSTUVWXYZ234567ABCDEFGHIJKLMNOPQRSTUVWX" />,
+      { wrapper }
+    );
+
+    const chart = await screen.findByRole("img", { name: /dividend history chart/i });
+    expect(chart).toHaveAccessibleName();
+    const description = chart.getAttribute("aria-describedby");
+    expect(description).toBeTruthy();
+    const summary = document.getElementById(description!);
+    expect(summary).toHaveTextContent(/2 dividend distributions for all time/i);
+    expect(summary).toHaveTextContent(/Total 3,000 stroops/i);
+    const latestDate = new Date((now - 86400) * 1000).toLocaleDateString();
+    expect(summary?.textContent).toContain(`Latest 1,000 stroops on ${latestDate}`);
   });
 });
 

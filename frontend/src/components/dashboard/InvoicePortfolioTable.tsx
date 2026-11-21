@@ -6,6 +6,7 @@
 import { Component, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, Skeleton } from "../ui";
+import { StaleDataIndicator, getQueryFreshness } from "../StaleDataIndicator";
 import { contracts } from "../../lib/contracts/index";
 import { CONTRACT_IDS } from "../../lib/stellar";
 import type { InvoiceMeta } from "../../types";
@@ -111,7 +112,7 @@ async function fetchInvoiceRows(walletAddress: string): Promise<InvoiceRow[]> {
 // ── Inner component ───────────────────────────────────────────────────────────
 
 function InvoicePortfolioTableInner({ walletAddress }: Props) {
-  const { data: rows, isLoading, error } = useQuery({
+  const { data: rows, isLoading, error, isRefetchError, isPaused, dataUpdatedAt, refetch } = useQuery({
     queryKey: ["invoicePortfolio", walletAddress],
     queryFn: () =>
       walletAddress ? fetchInvoiceRows(walletAddress) : Promise.resolve([]),
@@ -150,7 +151,8 @@ function InvoicePortfolioTableInner({ walletAddress }: Props) {
     );
   }
 
-  if (error) {
+  // Only replace the card with an error when there is no cached read to show.
+  if (error && rows === undefined) {
     return (
       <Card title="Invoice Portfolio">
         <p style={{ color: "#ef4444", fontSize: "0.875rem" }}>
@@ -161,9 +163,16 @@ function InvoicePortfolioTableInner({ walletAddress }: Props) {
   }
 
   const data = rows ?? [];
+  const freshness = getQueryFreshness({
+    hasData: rows !== undefined,
+    isRefetchError,
+    isPaused,
+    dataUpdatedAt,
+  });
 
   return (
     <Card title="Invoice Portfolio">
+      <StaleDataIndicator {...freshness} onRetry={() => void refetch()} />
       {data.length === 0 ? (
         <p className="muted" style={{ fontSize: "0.875rem" }}>
           No invoice positions found for this wallet.

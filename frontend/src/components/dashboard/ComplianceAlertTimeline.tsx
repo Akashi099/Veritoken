@@ -3,7 +3,7 @@
  * Issue #547
  */
 
-import { Component, type ReactNode } from "react";
+import { Component, useId, type ReactNode } from "react";
 import { Card } from "../ui";
 import { useNotificationStore, type AppNotification } from "../../lib/notificationStore";
 import { useNetworkStore } from "../../lib/networkStore";
@@ -52,6 +52,29 @@ function explorerUrl(network: string, txHash?: string): string | null {
       ? "https://stellar.expert/explorer/public"
       : "https://stellar.expert/explorer/testnet";
   return `${base}/tx/${txHash}`;
+}
+
+/**
+ * Concise text summary of the visible alerts (count per severity and the
+ * most recent alert) for assistive technology.
+ */
+export function summarizeAlerts(alerts: AppNotification[]): string {
+  if (alerts.length === 0) return "No compliance alerts recorded this session.";
+  const counts: Record<string, number> = {};
+  for (const a of alerts) counts[a.severity] = (counts[a.severity] ?? 0) + 1;
+  const order = ["critical", "warning", "info"];
+  const severities = [
+    ...order.filter((k) => counts[k]),
+    ...Object.keys(counts).filter((k) => !order.includes(k)),
+  ]
+    .map((k) => `${counts[k]} ${k}`)
+    .join(", ");
+  const latest = alerts[0];
+  const plural = alerts.length === 1 ? "alert" : "alerts";
+  return (
+    `${alerts.length} compliance ${plural}: ${severities}. ` +
+    `Most recent: ${latest.title} at ${new Date(latest.timestamp).toLocaleString()}.`
+  );
 }
 
 // ── Alert row ─────────────────────────────────────────────────────────────────
@@ -152,6 +175,7 @@ function ComplianceAlertTimelineInner() {
 
   // Show the 50 most recent, which are already at the front (push prepends)
   const visible = notifications.slice(0, 50);
+  const summaryId = useId();
 
   return (
     <Card title="Compliance Alerts">
@@ -187,12 +211,19 @@ function ComplianceAlertTimelineInner() {
       ) : (
         <ul
           aria-label="Compliance alert timeline"
+          aria-describedby={summaryId}
           style={{ listStyle: "none", margin: 0, padding: 0, maxHeight: 340, overflowY: "auto" }}
         >
           {visible.map((n) => (
             <AlertRow key={n.id} notification={n} network={network} />
           ))}
         </ul>
+      )}
+
+      {visible.length > 0 && (
+        <p id={summaryId} className="sr-only" data-testid="compliance-timeline-summary">
+          {summarizeAlerts(visible)}
+        </p>
       )}
     </Card>
   );

@@ -7,6 +7,7 @@ import { Component, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Card, Skeleton } from "../ui";
+import { StaleDataIndicator, getQueryFreshness } from "../StaleDataIndicator";
 import { contracts } from "../../lib/contracts/index";
 import { CONTRACT_IDS } from "../../lib/stellar";
 import type { KycRecord } from "../../types";
@@ -57,7 +58,7 @@ async function fetchKycRecord(address: string): Promise<KycRecord | null> {
 // ── Inner component ───────────────────────────────────────────────────────────
 
 function KycExpiryPanelInner({ walletAddress }: Props) {
-  const { data: record, isLoading, error } = useQuery({
+  const { data: record, isLoading, isRefetchError, isPaused, dataUpdatedAt, refetch } = useQuery({
     queryKey: ["kycRecord", walletAddress],
     queryFn: () =>
       walletAddress ? fetchKycRecord(walletAddress) : Promise.resolve(null),
@@ -83,7 +84,9 @@ function KycExpiryPanelInner({ walletAddress }: Props) {
     );
   }
 
-  if (error || !record) {
+  // A failed refetch keeps the cached record; only treat the wallet as having
+  // no record when no successful read is available at all.
+  if (!record) {
     return (
       <Card title="KYC Status">
         <div
@@ -117,6 +120,16 @@ function KycExpiryPanelInner({ walletAddress }: Props) {
     );
   }
 
+  const freshness = getQueryFreshness({
+    hasData: true,
+    isRefetchError,
+    isPaused,
+    dataUpdatedAt,
+  });
+  const staleIndicator = (
+    <StaleDataIndicator {...freshness} onRetry={() => void refetch()} />
+  );
+
   const isApproved = record.status === "Approved";
   const nowS = Math.floor(Date.now() / 1000);
   const expiry = typeof record.expiry === "bigint" ? Number(record.expiry) : record.expiry;
@@ -127,6 +140,7 @@ function KycExpiryPanelInner({ walletAddress }: Props) {
   if (!isApproved) {
     return (
       <Card title="KYC Status">
+        {staleIndicator}
         <div
           role="alert"
           style={{
@@ -155,6 +169,7 @@ function KycExpiryPanelInner({ walletAddress }: Props) {
 
   return (
     <Card title="KYC Status">
+      {staleIndicator}
       {expiresWithin30 && (
         <div
           role="alert"
