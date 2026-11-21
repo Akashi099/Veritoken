@@ -206,15 +206,40 @@ docker compose -f docker-compose.indexer.yml down -v   # also drop the postgres-
 
 ## Stopping the Stack
 
+Stopping and resetting are different operations. Read the table before running a cleanup command.
+
+| Command | Containers | `cargo-cache` / `node-modules` volumes | Local Stellar ledger | Use when |
+|---|---|---|---|---|
+| `docker compose stop` | Stopped, kept | Kept | Kept | You want to pause and resume the same stack |
+| `docker compose down` | Removed | Kept | **Reset** | You want a clean shutdown; expect to redeploy |
+| `docker compose down -v` | Removed | **Removed** (slower next build) | **Reset** | You want a full rebuild of caches as well |
+
+Points to note:
+
+- The `stellar` service has no volume. Its ledger lives inside its container, so `docker compose down` resets the local chain even without `-v`. Only `docker compose stop` followed by `docker compose start` keeps it.
+- After any reset, deploy again with `scripts/deploy.sh`. The contract IDs in `frontend/.env` and `.env.docker` refer to the old ledger and will no longer work.
+- `down -v` does not delete any data that is not already reset by `down`. It only adds the removal of the two cache volumes.
+- Do not run `down -v` on the indexer stack unless you intend to drop its database. See [Stop the indexer](#stop-the-indexer).
+
+Stop the stack without resetting it:
+
+```bash
+docker compose stop
+```
+
+Shut down cleanly (the local chain resets):
+
 ```bash
 docker compose down
 ```
 
-To also remove the build cache volumes (forces a full rebuild next time):
+Remove the build caches as well (forces a full rebuild on the next start):
 
 ```bash
 docker compose down -v
 ```
+
+After any of these, run the [Health Check](#health-check) before you start work again.
 
 ---
 
