@@ -12,10 +12,19 @@ import { useToast } from "../lib/toast";
 import type { InvoiceMeta, ContractEvent, JournalEntry } from "../types";
 
 /**
- * Decorative spinner. Hidden from assistive technology: the surrounding
- * button carries the action-specific pending text and a polite live region
- * announces it, so the spinner animation is never the only cue.
+ * Converts a validated amount string to stroops. Stroops are indivisible, so a
+ * value the amount validator accepts (e.g. "1.5") can still be rejected here;
+ * that rejection is surfaced inline on the amount field (issue #1070) instead
+ * of only in a general toast.
  */
+function toStroops(value: string): { amount: bigint | null; error: string | null } {
+  try {
+    return { amount: BigInt(value.trim()), error: null };
+  } catch {
+    return { amount: null, error: "Amount must be a whole number of stroops" };
+  }
+}
+
 function Spinner() {
   return (
     <span
@@ -54,6 +63,7 @@ export default function InvoicePage() {
   const [issueAmount, setIssueAmount] = useState("");
   const [issueTo, setIssueTo] = useState("");
   const [issueLoading, setIssueLoading] = useState(false);
+  const [issueAmountSubmitError, setIssueAmountSubmitError] = useState<string | null>(null);
 
   // ── Settle ───────────────────────────────────────────────────────────────
   const [settleLoading, setSettleLoading] = useState(false);
@@ -62,6 +72,7 @@ export default function InvoicePage() {
   // ── Redeem form ──────────────────────────────────────────────────────────
   const [redeemAmount, setRedeemAmount] = useState("");
   const [redeemLoading, setRedeemLoading] = useState(false);
+  const [redeemAmountSubmitError, setRedeemAmountSubmitError] = useState<string | null>(null);
 
   // ── Events ───────────────────────────────────────────────────────────────
   const [events, setEvents] = useState<ContractEvent[]>([]);
@@ -141,15 +152,21 @@ export default function InvoicePage() {
     e.preventDefault();
     if (!connected || !address || issueLoading) return;
     if (!issueAmountValidation.isValid) {
-      addToast(issueAmountValidation.error || "Invalid amount", "error");
+      setIssueAmountSubmitError(issueAmountValidation.error || "Amount is required");
       return;
     }
+    const { amount, error: stroopsError } = toStroops(issueAmount);
+    if (amount === null) {
+      setIssueAmountSubmitError(stroopsError);
+      return;
+    }
+    setIssueAmountSubmitError(null);
     setIssueLoading(true);
     try {
       await contracts.invoice.issue(
         address,
         issueTo || address,
-        BigInt(issueAmount),
+        amount,
         signTx,
       );
       addToast("Invoice tokens issued successfully.", "success");
@@ -184,12 +201,18 @@ export default function InvoicePage() {
     e.preventDefault();
     if (!connected || !address || redeemLoading) return;
     if (!redeemAmountValidation.isValid) {
-      addToast(redeemAmountValidation.error || "Invalid amount", "error");
+      setRedeemAmountSubmitError(redeemAmountValidation.error || "Amount is required");
       return;
     }
+    const { amount, error: stroopsError } = toStroops(redeemAmount);
+    if (amount === null) {
+      setRedeemAmountSubmitError(stroopsError);
+      return;
+    }
+    setRedeemAmountSubmitError(null);
     setRedeemLoading(true);
     try {
-      await contracts.invoice.redeem(address, BigInt(redeemAmount), signTx);
+      await contracts.invoice.redeem(address, amount, signTx);
       addToast("Tokens redeemed successfully.", "success");
       // Preserve input on failure; reset only after confirmed success.
       setRedeemAmount("");
@@ -474,9 +497,12 @@ export default function InvoicePage() {
                 name="issueAmount"
                 type="number"
                 value={issueAmount}
-                onChange={(e) => setIssueAmount(e.target.value)}
+                onChange={(e) => {
+                  setIssueAmount(e.target.value);
+                  setIssueAmountSubmitError(null);
+                }}
                 required
-                error={issueAmountValidation.error}
+                error={issueAmountValidation.error ?? issueAmountSubmitError}
               />
               <button
                 type="submit"
@@ -513,9 +539,12 @@ export default function InvoicePage() {
                 name="redeemAmount"
                 type="number"
                 value={redeemAmount}
-                onChange={(e) => setRedeemAmount(e.target.value)}
+                onChange={(e) => {
+                  setRedeemAmount(e.target.value);
+                  setRedeemAmountSubmitError(null);
+                }}
                 required
-                error={redeemAmountValidation.error}
+                error={redeemAmountValidation.error ?? redeemAmountSubmitError}
               />
               <button
                 type="submit"

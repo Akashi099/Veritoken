@@ -4,6 +4,11 @@
  * Shown at the top of a multi-step form when a saved draft exists for that
  * flow. Lets the user resume where they left off or discard the draft and
  * start fresh.
+ *
+ * Issue #1071: once a draft has been resumed, `DraftRestoredNotice` makes it
+ * explicit that the values shown are local draft content restored from this
+ * browser — not data read from the contract. Dismissing the notice only hides
+ * it; it never discards the stored draft.
  */
 
 import type { DraftEntry } from "../lib/drafts";
@@ -29,7 +34,8 @@ export function DraftBanner({ draft, onResume, onDiscard }: DraftBannerProps) {
   return (
     <div role="status" style={styles.banner}>
       <span style={styles.text}>
-        You have a saved draft from <strong>{relativeTime(draft.savedAt)}</strong>.
+        You have a draft saved locally in this browser from{" "}
+        <strong>{relativeTime(draft.savedAt)}</strong>. It has not been submitted on-chain.
       </span>
       <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0 }}>
         <button type="button" className="btn-accent" style={styles.btn} onClick={onResume}>
@@ -39,6 +45,32 @@ export function DraftBanner({ draft, onResume, onDiscard }: DraftBannerProps) {
           Discard
         </button>
       </div>
+    </div>
+  );
+}
+
+interface DraftRestoredNoticeProps {
+  draft: DraftEntry;
+  onDismiss: () => void;
+}
+
+export function DraftRestoredNotice({ draft, onDismiss }: DraftRestoredNoticeProps) {
+  return (
+    <div role="status" aria-live="polite" data-testid="draft-restored-notice" style={styles.restored}>
+      <span style={styles.text}>
+        <strong>Draft restored.</strong> The values below were restored from a draft saved locally in
+        this browser {relativeTime(draft.savedAt)}. They are not loaded from the contract and have not
+        been submitted on-chain.
+      </span>
+      <button
+        type="button"
+        className="btn-ghost"
+        style={styles.btn}
+        onClick={onDismiss}
+        aria-label="Dismiss draft restored notice"
+      >
+        Dismiss
+      </button>
     </div>
   );
 }
@@ -55,6 +87,18 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: "1.25rem",
     background: "var(--warning-soft, color-mix(in srgb, #e0a752 12%, transparent))",
     border: "1px solid var(--warning, #e0a752)",
+  },
+  restored: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: "0.75rem",
+    padding: "0.75rem 1rem",
+    borderRadius: 10,
+    marginBottom: "1.25rem",
+    background: "var(--accent-soft, color-mix(in srgb, #5b8def 12%, transparent))",
+    border: "1px solid var(--border)",
   },
   text: { fontSize: "0.85rem", color: "var(--text)" },
   btn: { fontSize: "0.78rem", padding: "0.35rem 0.8rem" },

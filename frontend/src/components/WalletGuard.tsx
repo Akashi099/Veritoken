@@ -15,6 +15,7 @@ import type { ProviderType, WalletProvider } from "../lib/walletProvider";
 import { WalletConnectProvider } from "../lib/walletProvider";
 import { NETWORK_PASSPHRASE } from "../lib/stellar";
 import WalletSelectorModal from "./WalletSelectorModal";
+import { WalletStatus } from "./WalletStatus";
 
 export default function WalletGuard({
   children,
@@ -85,6 +86,18 @@ export default function WalletGuard({
   if (!connected) {
     return (
       <div>
+        {/* Textual wallet state (issue #1072) — announced politely on change. */}
+        <p
+          role="status"
+          aria-live="polite"
+          className="muted"
+          style={{ textAlign: "center", fontSize: "0.85rem", margin: "0 0 0.5rem" }}
+        >
+          <WalletStatus
+            status={connectingType || wcUri ? "pending" : "disconnected"}
+            visibleLabel
+          />
+        </p>
         <WalletSelectorModal
           onSelect={handleSelect}
           connectingType={connectingType}
