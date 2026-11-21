@@ -75,7 +75,9 @@ export default function WalletGuard({
         }
       } catch (err: unknown) {
         setWcUri(null);
-        setConnectError(err instanceof Error ? err.message : "Connection failed.");
+        // Keep the raw error for developers; show only the user-safe message.
+        console.error("[wallet] connection failed", type, err);
+        setConnectError(describeWalletError(err));
       } finally {
         setConnectingType(null);
       }
