@@ -178,6 +178,7 @@ export function Field({
   required,
   placeholder,
   error,
+  hint,
 }: {
   label: string;
   name?: string;
@@ -187,9 +188,13 @@ export function Field({
   required?: boolean;
   placeholder?: string;
   error?: string | null;
+  /** Optional contextual helper text rendered below the input. */
+  hint?: ReactNode;
 }) {
   const id = useFieldId(name);
   const errorId = error ? `${id}-error` : undefined;
+  const hintId = hint ? `${id}-hint` : undefined;
+  const describedBy = [hintId, errorId].filter(Boolean).join(" ") || undefined;
   return (
     <div className="field">
       <label htmlFor={id}>
@@ -206,9 +211,18 @@ export function Field({
         aria-required={required}
         placeholder={placeholder}
         aria-invalid={error ? "true" : undefined}
-        aria-describedby={errorId}
+        aria-describedby={describedBy}
         style={error ? { borderColor: "#ef4444" } : undefined}
       />
+      {hint && (
+        <div
+          id={hintId}
+          className="muted"
+          style={{ fontSize: "0.78rem", marginTop: "0.25rem" }}
+        >
+          {hint}
+        </div>
+      )}
       {error && (
         <div
           id={errorId}

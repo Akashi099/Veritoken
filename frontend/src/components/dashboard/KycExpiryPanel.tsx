@@ -10,6 +10,7 @@ import { Card, Skeleton } from "../ui";
 import { StaleDataIndicator, getQueryFreshness } from "../StaleDataIndicator";
 import { contracts } from "../../lib/contracts/index";
 import { CONTRACT_IDS } from "../../lib/stellar";
+import { formatKycExpiry, NO_EXPIRY_LABEL } from "../../lib/dateFormat";
 import type { KycRecord } from "../../types";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -236,10 +237,10 @@ function KycExpiryPanelInner({ walletAddress }: Props) {
         <dt className="muted">Expiry</dt>
         <dd data-testid="kyc-expiry-value" style={{ margin: 0 }}>
           {!hasExpiry ? (
-            <span className="muted">No expiry set</span>
+            <span className="muted">{NO_EXPIRY_LABEL}</span>
           ) : (
             <span style={{ color: expiresWithin30 ? "#f59e0b" : undefined }}>
-              {new Date(expiry * 1000).toLocaleDateString()}
+              {formatKycExpiry(expiry)}
               {daysRemaining !== null && daysRemaining > 0 && (
                 <span className="muted" style={{ marginLeft: "0.4rem", fontSize: "0.78rem" }}>
                   ({daysRemaining}d remaining)

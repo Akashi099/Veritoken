@@ -182,7 +182,7 @@ describe("KycExpiryPanel", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/no expiry set/i)).toBeInTheDocument();
+      expect(screen.getByText(/^no expiry$/i)).toBeInTheDocument();
     });
   });
 
