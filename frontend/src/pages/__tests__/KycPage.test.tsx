@@ -174,6 +174,21 @@ describe("KycPage – approve form", () => {
     expect((btn as HTMLButtonElement).disabled).toBe(true);
   });
 
+  it("explains the expiry unit in helper text linked to the validity input", () => {
+    renderKycPage();
+    const expiryInput = screen.getAllByRole("spinbutton").find(
+      (el) => (el as HTMLInputElement).value === "365",
+    );
+    if (!expiryInput) throw new Error("expiry input not found");
+    const describedBy = expiryInput.getAttribute("aria-describedby") ?? "";
+    const hintEl = describedBy
+      .split(" ")
+      .map((id) => document.getElementById(id))
+      .find((el) => el?.textContent?.includes("days"));
+    expect(hintEl).toBeDefined();
+    expect(hintEl?.textContent).toMatch(/Number of days from approval/);
+  });
+
   it("shows field error and blocks submission for invalid expiry value", async () => {
     renderKycPage();
     const subjectInput = screen.getAllByRole("textbox").find(

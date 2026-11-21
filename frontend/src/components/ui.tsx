@@ -188,7 +188,8 @@ export function Field({
   required?: boolean;
   placeholder?: string;
   error?: string | null;
-  hint?: string;
+  /** Optional contextual helper text rendered below the input. */
+  hint?: ReactNode;
 }) {
   const id = useFieldId(name);
   const errorId = error ? `${id}-error` : undefined;
@@ -214,13 +215,13 @@ export function Field({
         style={error ? { borderColor: "#ef4444" } : undefined}
       />
       {hint && (
-        <p
+        <div
           id={hintId}
           className="muted"
-          style={{ fontSize: "0.8rem", marginTop: "0.25rem", marginBottom: 0 }}
+          style={{ fontSize: "0.78rem", marginTop: "0.25rem" }}
         >
           {hint}
-        </p>
+        </div>
       )}
       {error && (
         <div

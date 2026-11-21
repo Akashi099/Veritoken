@@ -148,6 +148,8 @@ A React + Vite dashboard ships with the kit, wired to Freighter wallet and the S
 
 Copy `frontend/.env.example` to `frontend/.env` and fill in your deployed contract IDs to connect the UI to any network.
 
+See [docs/frontend-environment.md](docs/frontend-environment.md) for what each `VITE_*` variable does and which ones are required. `VITE_` values are public in the browser bundle, so never put secrets in them.
+
 For the carbon-credit unit convention, supply lifecycle, retirement behavior, and receipt lookup API, see [docs/carbon-credit-token.md](docs/carbon-credit-token.md). One on-chain token unit represents one metric tonne of CO2e, with `decimals() == 0`.
 
 ---
@@ -245,6 +247,9 @@ Veritoken/
 | [docs/mainnet-deployment.md](docs/mainnet-deployment.md) | Step-by-step mainnet deployment with production checklist |
 | [docs/storage-patterns.md](docs/storage-patterns.md) | Storage tier rationale and TTL bump map for every `DataKey` |
 | [docs/incident-response.md](docs/incident-response.md) | Operational runbook: pause, key rotation, compromised verifier, upgrade |
+| [docs/frontend-environment.md](docs/frontend-environment.md) | Reference for every frontend `VITE_*` variable: purpose, format, and which are required |
+| [docs/property-dividends.md](docs/property-dividends.md) | Dividend lifecycle for property tokens: holder prerequisites, distribution types, accrual, and claims |
+| [docs/glossary.md](docs/glossary.md) | Definitions of Veritoken terms: tiers, jurisdictions, verifiers, lockups, retirement receipts, dividend index |
 | [docs/troubleshooting.md](docs/troubleshooting.md) | Common problems and fixes for contributors and operators |
 | [docs/examples/](docs/examples/) | Language-specific integration examples (Python, JavaScript) |
 | [docs/community-showcase.md](docs/community-showcase.md) | Community integrations, extensions, and reference implementations built on Veritoken |

@@ -34,7 +34,7 @@ function Spinner() {
   );
 }
 
-function ReceiptCard({
+export function ReceiptCard({
   receipt,
   index,
   highlight = false,
@@ -105,12 +105,19 @@ function ReceiptCard({
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.25rem" }}>
           {verification === undefined && onVerify && (
             <button
+              type="button"
               className="btn-ghost"
               style={{ fontSize: "0.72rem", padding: "0.15rem 0.5rem" }}
               onClick={() => onVerify(index)}
               disabled={verifying}
+              aria-label={
+                verifying
+                  ? `Verifying receipt #${index} on-chain`
+                  : `Verify receipt #${index} on-chain`
+              }
+              title="Checks this receipt against the carbon contract. Nothing is copied or downloaded."
             >
-              {verifying ? "Verifying…" : "Verify"}
+              {verifying ? "Verifying on-chain…" : "Verify on-chain"}
             </button>
           )}
           {verification === null && (

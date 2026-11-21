@@ -82,4 +82,29 @@ describe("CopyButton", () => {
     expect(btn.textContent).toBe("Copy");
     expect(btn.textContent).not.toBe("Copied!");
   });
+
+  it("announces success through a status region after a successful copy", async () => {
+    render(<CopyButton text="announce me" />);
+    const status = screen.getByRole("status");
+    expect(status.textContent).toBe("");
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button"));
+    });
+
+    expect(status.textContent).toBe("Copied to clipboard");
+  });
+
+  it("does not announce success when the clipboard write fails", async () => {
+    vi.mocked(navigator.clipboard.writeText).mockRejectedValueOnce(new Error("denied"));
+
+    render(<CopyButton text="fail" />);
+    const status = screen.getByRole("status");
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button"));
+    });
+
+    expect(status.textContent).toBe("");
+  });
 });

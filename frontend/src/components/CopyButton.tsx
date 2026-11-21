@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useClipboard } from "../lib/clipboard";
 
 interface CopyButtonProps {
@@ -10,10 +11,18 @@ interface CopyButtonProps {
 
 export function CopyButton({ text, label, className, style, onCopy }: CopyButtonProps) {
   const { copied, copy } = useClipboard();
+  const [announcement, setAnnouncement] = useState("");
 
   return (
+    <>
     <button
-      onClick={() => copy(text).then((ok) => ok && onCopy?.())}
+      onClick={() =>
+        copy(text).then((ok) => {
+          if (!ok) return;
+          setAnnouncement("Copied to clipboard");
+          onCopy?.();
+        })
+      }
       aria-label={label ?? `Copy ${text}`}
       className={className}
       style={{
@@ -31,5 +40,23 @@ export function CopyButton({ text, label, className, style, onCopy }: CopyButton
     >
       {copied ? "Copied!" : "Copy"}
     </button>
+    <span
+      role="status"
+      aria-live="polite"
+      style={{
+        position: "absolute",
+        width: 1,
+        height: 1,
+        padding: 0,
+        margin: -1,
+        overflow: "hidden",
+        clip: "rect(0, 0, 0, 0)",
+        whiteSpace: "nowrap",
+        border: 0,
+      }}
+    >
+      {announcement}
+    </span>
+    </>
   );
 }

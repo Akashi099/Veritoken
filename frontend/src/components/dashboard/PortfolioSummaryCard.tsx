@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { Card, Skeleton } from "../ui";
+import { StaleDataIndicator, getQueryFreshness } from "../StaleDataIndicator";
 import { contracts } from "../../lib/contracts/index";
 import { CONTRACT_IDS } from "../../lib/stellar";
 
@@ -104,7 +105,7 @@ async function fetchPortfolioBalances(walletAddress: string): Promise<AssetBalan
 // ── Component ─────────────────────────────────────────────────────────────────
 
 function PortfolioSummaryCardInner({ walletAddress }: Props) {
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, isRefetchError, isPaused, dataUpdatedAt, refetch } = useQuery({
     queryKey: ["portfolioBalances", walletAddress],
     queryFn: () =>
       walletAddress ? fetchPortfolioBalances(walletAddress) : Promise.resolve([]),
@@ -134,7 +135,8 @@ function PortfolioSummaryCardInner({ walletAddress }: Props) {
     );
   }
 
-  if (error) {
+  // Only replace the card with an error when there is no cached read to show.
+  if (error && data === undefined) {
     return (
       <Card title="Portfolio Summary">
         <p style={{ color: "#ef4444", fontSize: "0.875rem" }}>
@@ -143,6 +145,13 @@ function PortfolioSummaryCardInner({ walletAddress }: Props) {
       </Card>
     );
   }
+
+  const freshness = getQueryFreshness({
+    hasData: data !== undefined,
+    isRefetchError,
+    isPaused,
+    dataUpdatedAt,
+  });
 
   const balances = data ?? [];
   const nonZero = balances.filter((b) => b.balance > 0n);
@@ -155,6 +164,7 @@ function PortfolioSummaryCardInner({ walletAddress }: Props) {
 
   return (
     <Card title="Portfolio Summary">
+      <StaleDataIndicator {...freshness} onRetry={() => void refetch()} />
       <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap", marginBottom: "1rem" }}>
         <div>
           <p className="muted" style={{ fontSize: "0.78rem", marginBottom: "0.2rem" }}>
