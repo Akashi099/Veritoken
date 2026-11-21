@@ -133,6 +133,15 @@ cargo build --release --target wasm32v1-none
 cargo test --features testutils
 ```
 
+> **No funded identity required for unit tests.** The command above runs
+> entirely in the Soroban test environment — no live network, no testnet
+> account, and no XLM balance needed. Only the workflows that submit real
+> transactions (deployment, KYC approval against a live registry, compliance
+> rule changes on-chain) require a funded Stellar identity. To set one up for
+> testnet use, run `bash scripts/setup-identity.sh veritoken-dev`. For a fully
+> local stack with no network dependency at all, see the
+> [Docker environment guide](docs/docker-environment.md).
+
 ---
 
 ## Frontend

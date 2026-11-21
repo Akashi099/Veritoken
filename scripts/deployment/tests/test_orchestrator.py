@@ -490,6 +490,72 @@ class DeploymentOrchestratorTest(unittest.TestCase):
         )
 
 
+class VerifyManifestTest(unittest.TestCase):
+    def test_unsupported_schema_version_is_rejected(self) -> None:
+        """verify_manifest must reject a manifest whose schema_version differs
+        from MANIFEST_SCHEMA_VERSION (currently 1).  An unsupported version
+        must raise DeploymentError with a version-specific diagnostic rather
+        than silently treating the manifest as a valid older format."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            wasm_dir = root / "wasm"
+            wasm_dir.mkdir()
+
+            # Write a minimal valid WASM so the artifact checks can pass.
+            artifact = wasm_dir / "registry.wasm"
+            artifact.write_bytes(b"\x00asm\x01\x00\x00\x00" + b"unsupported_version_fixture")
+
+            # Build the smallest structurally valid manifest, but stamp it with
+            # a schema_version value that the orchestrator does not recognise.
+            unsupported_version = 99
+            manifest = {
+                "schema_version": unsupported_version,
+                "status": "verified",
+                "deployment_id": "fixture-id",
+                "generation": 1,
+                "identity": "fixture",
+                "source_account": "G" + "A" * 55,
+                "network": {"name": "testnet"},
+                "network_name": "testnet",
+                "config": {
+                    "path": "deployment/config.testnet.json",
+                    "sha256": "a" * 64,
+                    "profile": "development",
+                },
+                "contracts": {
+                    "registry": {
+                        "name": "registry",
+                        "env_key": "VITE_REGISTRY_ID",
+                        "dependencies": [],
+                        "deployment_mode": "initialize",
+                        "declared_metadata": {},
+                        "stage": "initialized",
+                        "artifact": {
+                            "path": str(artifact.relative_to(root).as_posix()),
+                            "size_bytes": artifact.stat().st_size,
+                            "sha256": "b" * 64,
+                            "contract_metadata_sha256": "c" * 64,
+                        },
+                        "wasm_hash": "b" * 64,
+                        "contract_id": "C" + "A" * 55,
+                        "resolved_dependencies": {},
+                    }
+                },
+            }
+
+            with self.assertRaisesRegex(
+                DeploymentError,
+                r"schema.version",
+            ):
+                verify_manifest(
+                    manifest=manifest,
+                    repo_root=root,
+                    client=FakeStellarClient(),
+                    identity="fixture",
+                    generated_at="2026-11-20T00:00:00Z",
+                )
+
+
 class DeploymentConfigTest(unittest.TestCase):
     def test_dependency_cycle_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
