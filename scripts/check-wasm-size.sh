@@ -83,6 +83,13 @@ fi
 
 EXIT_CODE=0
 
+# Contracts that exceed their budget — collected for a concise failure
+# summary so a size failure stays actionable even if the full table above
+# scrolls off in CI logs.
+declare -a FAILED_NAMES=()
+declare -a FAILED_SIZES=()
+declare -a FAILED_BUDGETS=()
+
 printf "\n%-52s %12s  %12s  %s\n" "Contract" "Size (bytes)" "Budget (bytes)" "Status"
 printf '%s\n' "$(printf '─%.0s' {1..100})"
 
@@ -109,6 +116,9 @@ for WASM in "${WASMS[@]}"; do
     if [ "$SIZE" -gt "$BUDGET" ]; then
         STATUS="❌  OVER BUDGET — ${SIZE_KB} KB > ${BUDGET_KB} KB (${PCT}%)"
         EXIT_CODE=1
+        FAILED_NAMES+=("$NAME")
+        FAILED_SIZES+=("$SIZE")
+        FAILED_BUDGETS+=("$BUDGET")
     elif [ "$PCT" -ge 90 ]; then
         STATUS="⚠️   NEAR LIMIT  — ${SIZE_KB} KB / ${BUDGET_KB} KB (${PCT}%)"
     else
@@ -121,6 +131,18 @@ done
 printf '%s\n\n' "$(printf '─%.0s' {1..100})"
 
 if [ "$EXIT_CODE" -ne 0 ]; then
+    echo ""
+    echo "Failing artifact(s) — actual size exceeds configured budget:"
+    for index in "${!FAILED_NAMES[@]}"; do
+        name="${FAILED_NAMES[$index]}"
+        size="${FAILED_SIZES[$index]}"
+        budget="${FAILED_BUDGETS[$index]}"
+        size_kb=$(awk "BEGIN { printf \"%.1f\", $size / 1024 }")
+        budget_kb=$(awk "BEGIN { printf \"%.1f\", $budget / 1024 }")
+        printf "  %s: %d bytes (%s KB) exceeds budget of %d bytes (%s KB)\n" \
+            "$name" "$size" "$size_kb" "$budget" "$budget_kb"
+    done
+    echo ""
     cat <<'EOF'
 One or more WASM binaries exceed their documented size budget.
 

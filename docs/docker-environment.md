@@ -86,7 +86,19 @@ The script checks:
 2. The `contracts` container is running and `cargo check` passes
 3. The Vite dev server responds at `localhost:5173`
 
-Exit code `0` means all checks passed. Exit code `1` means at least one check failed — run `docker compose logs` for details.
+Exit code `0` means all checks passed. Exit code `1` means at least one check
+failed — the summary names each unmet prerequisite so you know which service to
+investigate, and you can run `docker compose logs` for details.
+
+To validate the failure path without Docker (for example on a fresh clone or
+in CI), run:
+
+```bash
+bash scripts/docker-health.sh --self-test
+```
+
+This simulates one unhealthy service and exits `0` only when the script
+correctly reports it as not ready.
 
 ---
 
