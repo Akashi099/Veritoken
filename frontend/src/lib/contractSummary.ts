@@ -8,6 +8,7 @@
 
 import type { GlobalSnapshot, HolderSnapshot, PolicySnapshot } from "./readApi";
 import type { ComplianceRules } from "../types";
+import { formatKycExpiry } from "./dateFormat";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -162,7 +163,7 @@ export function summariseHolder(snap: HolderSnapshot): ContractSummary {
     }
 
     if (expiry > 0) {
-      const expiryDate = new Date(expiry * 1000).toLocaleDateString();
+      const expiryDate = formatKycExpiry(expiry);
       const daysLeft = Math.floor((expiry - Date.now() / 1000) / 86400);
       if (daysLeft < 30 && daysLeft >= 0) {
         lines.push({ level: "warn", text: `KYC expires in ${daysLeft} day${daysLeft !== 1 ? "s" : ""} (${expiryDate}). Renew soon.` });

@@ -11,11 +11,25 @@ import ConfirmDialog from "../components/ConfirmDialog";
 import { useToast } from "../lib/toast";
 import type { InvoiceMeta, ContractEvent, JournalEntry } from "../types";
 
+/**
+ * Converts a validated amount string to stroops. Stroops are indivisible, so a
+ * value the amount validator accepts (e.g. "1.5") can still be rejected here;
+ * that rejection is surfaced inline on the amount field (issue #1070) instead
+ * of only in a general toast.
+ */
+function toStroops(value: string): { amount: bigint | null; error: string | null } {
+  try {
+    return { amount: BigInt(value.trim()), error: null };
+  } catch {
+    return { amount: null, error: "Amount must be a whole number of stroops" };
+  }
+}
+
 function Spinner() {
   return (
     <span
-      role="status"
-      aria-label="Loading"
+      aria-hidden="true"
+      data-testid="spinner"
       style={{
         display: "inline-block",
         width: 16,
@@ -49,6 +63,7 @@ export default function InvoicePage() {
   const [issueAmount, setIssueAmount] = useState("");
   const [issueTo, setIssueTo] = useState("");
   const [issueLoading, setIssueLoading] = useState(false);
+  const [issueAmountSubmitError, setIssueAmountSubmitError] = useState<string | null>(null);
 
   // ── Settle ───────────────────────────────────────────────────────────────
   const [settleLoading, setSettleLoading] = useState(false);
@@ -57,6 +72,7 @@ export default function InvoicePage() {
   // ── Redeem form ──────────────────────────────────────────────────────────
   const [redeemAmount, setRedeemAmount] = useState("");
   const [redeemLoading, setRedeemLoading] = useState(false);
+  const [redeemAmountSubmitError, setRedeemAmountSubmitError] = useState<string | null>(null);
 
   // ── Events ───────────────────────────────────────────────────────────────
   const [events, setEvents] = useState<ContractEvent[]>([]);
@@ -72,6 +88,17 @@ export default function InvoicePage() {
     description: string;
     onConfirm: () => void;
   } | null>(null);
+
+  // Action-specific text announced to screen readers while a request is pending.
+  const pendingAnnouncement = issueLoading
+    ? "Issuing invoice tokens, please wait."
+    : redeemLoading
+      ? "Redeeming tokens, please wait."
+      : settleLoading
+        ? "Settling invoice, please wait."
+        : pauseLifecycleLoading
+          ? "Updating lifecycle status, please wait."
+          : "";
 
   // Validations
   const issueAmountValidation = useAmountValidation(issueAmount);
@@ -123,20 +150,29 @@ export default function InvoicePage() {
 
   const handleIssue = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!connected || !address) return;
+    if (!connected || !address || issueLoading) return;
     if (!issueAmountValidation.isValid) {
-      addToast(issueAmountValidation.error || "Invalid amount", "error");
+      setIssueAmountSubmitError(issueAmountValidation.error || "Amount is required");
       return;
     }
+    const { amount, error: stroopsError } = toStroops(issueAmount);
+    if (amount === null) {
+      setIssueAmountSubmitError(stroopsError);
+      return;
+    }
+    setIssueAmountSubmitError(null);
     setIssueLoading(true);
     try {
       await contracts.invoice.issue(
         address,
         issueTo || address,
-        BigInt(issueAmount),
+        amount,
         signTx,
       );
       addToast("Invoice tokens issued successfully.", "success");
+      // Only clear the form after a confirmed success. Failed or rejected
+      // submissions fall through to the catch block and keep the user's
+      // input so they can fix the wallet/network problem and retry.
       setIssueAmount("");
       setIssueTo("");
       await loadChainState();
@@ -148,7 +184,7 @@ export default function InvoicePage() {
   };
 
   const handleSettle = async () => {
-    if (!connected || !address) return;
+    if (!connected || !address || settleLoading) return;
     setSettleLoading(true);
     try {
       await contracts.invoice.settle(address, signTx);
@@ -163,15 +199,22 @@ export default function InvoicePage() {
 
   const handleRedeem = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!connected || !address) return;
+    if (!connected || !address || redeemLoading) return;
     if (!redeemAmountValidation.isValid) {
-      addToast(redeemAmountValidation.error || "Invalid amount", "error");
+      setRedeemAmountSubmitError(redeemAmountValidation.error || "Amount is required");
       return;
     }
+    const { amount, error: stroopsError } = toStroops(redeemAmount);
+    if (amount === null) {
+      setRedeemAmountSubmitError(stroopsError);
+      return;
+    }
+    setRedeemAmountSubmitError(null);
     setRedeemLoading(true);
     try {
-      await contracts.invoice.redeem(address, BigInt(redeemAmount), signTx);
+      await contracts.invoice.redeem(address, amount, signTx);
       addToast("Tokens redeemed successfully.", "success");
+      // Preserve input on failure; reset only after confirmed success.
       setRedeemAmount("");
       await loadChainState();
     } catch (err) {
@@ -206,7 +249,7 @@ export default function InvoicePage() {
   };
 
   const handleToggleLifecyclePause = async () => {
-    if (!connected || !address) return;
+    if (!connected || !address || pauseLifecycleLoading) return;
     setPauseLifecycleLoading(true);
     try {
       if (lifecyclePaused) {
@@ -228,6 +271,16 @@ export default function InvoicePage() {
   return (
     <div className="form-narrow">
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+        data-testid="invoice-pending-status"
+      >
+        {pendingAnnouncement}
+      </div>
 
       <PageHeader
         eyebrow="Asset Module"
@@ -361,9 +414,9 @@ export default function InvoicePage() {
             {/* Admin: settle button, visible only when not yet settled */}
             {connected && isSettled === false && (
               <div style={{ marginTop: "1.25rem" }}>
-                <button className="btn-block" onClick={handleSettle} disabled={settleLoading}>
+                <button className="btn-block" onClick={handleSettle} disabled={settleLoading} aria-busy={settleLoading}>
                   {settleLoading && <Spinner />}
-                  {settleLoading ? "Settling…" : "Settle Invoice"}
+                  {settleLoading ? "Settling invoice…" : "Settle Invoice"}
                 </button>
                 <p className="muted" style={{ fontSize: "0.75rem", marginTop: "0.4rem" }}>
                   Admin only. Marks this invoice as settled and opens token redemption for all holders.
@@ -383,10 +436,11 @@ export default function InvoicePage() {
                   style={lifecyclePaused ? undefined : { background: "rgba(239,68,68,0.15)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.3)" }}
                   onClick={handleToggleLifecyclePause}
                   disabled={pauseLifecycleLoading || lifecyclePaused === null}
+                  aria-busy={pauseLifecycleLoading}
                   aria-pressed={lifecyclePaused === true}
                 >
                   {pauseLifecycleLoading && <Spinner />}
-                  {pauseLifecycleLoading ? "Updating…" : lifecyclePaused ? "Resume Settlement & Redemption" : "Pause Settlement & Redemption"}
+                  {pauseLifecycleLoading ? "Updating lifecycle…" : lifecyclePaused ? "Resume Settlement & Redemption" : "Pause Settlement & Redemption"}
                 </button>
                 <p className="muted" style={{ fontSize: "0.75rem", marginTop: "0.4rem" }}>
                   Pausing blocks <code>settle()</code> and <code>redeem()</code>. Transfers in Issued state continue normally.
@@ -443,18 +497,22 @@ export default function InvoicePage() {
                 name="issueAmount"
                 type="number"
                 value={issueAmount}
-                onChange={(e) => setIssueAmount(e.target.value)}
+                onChange={(e) => {
+                  setIssueAmount(e.target.value);
+                  setIssueAmountSubmitError(null);
+                }}
                 required
-                error={issueAmountValidation.error}
+                error={issueAmountValidation.error ?? issueAmountSubmitError}
               />
               <button
                 type="submit"
                 className="btn-block"
                 style={{ marginTop: "0.75rem" }}
                 disabled={issueLoading || hasIssueAmountError}
+                aria-busy={issueLoading}
               >
                 {issueLoading && <Spinner />}
-                {issueLoading ? "Issuing…" : "Issue Invoice Tokens"}
+                {issueLoading ? "Issuing invoice tokens…" : "Issue Invoice Tokens"}
               </button>
             </form>
           </Card>
@@ -481,18 +539,22 @@ export default function InvoicePage() {
                 name="redeemAmount"
                 type="number"
                 value={redeemAmount}
-                onChange={(e) => setRedeemAmount(e.target.value)}
+                onChange={(e) => {
+                  setRedeemAmount(e.target.value);
+                  setRedeemAmountSubmitError(null);
+                }}
                 required
-                error={redeemAmountValidation.error}
+                error={redeemAmountValidation.error ?? redeemAmountSubmitError}
               />
               <button
                 type="submit"
                 className="btn-block"
                 style={{ marginTop: "0.75rem" }}
                 disabled={redeemLoading || hasRedeemAmountError || !isSettled || !!lifecyclePaused}
+                aria-busy={redeemLoading}
               >
                 {redeemLoading && <Spinner />}
-                {redeemLoading ? "Redeeming…" : "Redeem Tokens"}
+                {redeemLoading ? "Redeeming tokens…" : "Redeem Tokens"}
               </button>
             </form>
           </Card>

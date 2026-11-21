@@ -138,6 +138,38 @@ describe("InvoicePage – issue form accessibility", () => {
   });
 });
 
+describe("InvoicePage – numeric error placement (issue #1070)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("attaches the whole-stroop error to the amount input instead of a toast", async () => {
+    const issueMock = vi.mocked(contracts.invoice.issue);
+    renderInvoicePage();
+    const amount = await screen.findByLabelText(/^Amount \(stroops\)/i);
+
+    // "1.5" passes the generic amount validator but is not a whole stroop value.
+    fireEvent.change(amount, { target: { value: "1.5" } });
+    expect(amount).not.toHaveAttribute("aria-invalid");
+
+    fireEvent.submit(amount.closest("form")!);
+
+    await waitFor(() => {
+      expect(amount).toHaveAttribute("aria-invalid", "true");
+    });
+    const errorId = amount.getAttribute("aria-describedby");
+    expect(errorId).toBeTruthy();
+    const error = document.getElementById(errorId!);
+    expect(error).toHaveAttribute("role", "alert");
+    expect(error).toHaveTextContent(/whole number of stroops/i);
+    expect(issueMock).not.toHaveBeenCalled();
+
+    // Correcting the value clears the field-level error.
+    fireEvent.change(amount, { target: { value: "2" } });
+    expect(amount).not.toHaveAttribute("aria-invalid");
+  });
+});
+
 describe("InvoicePage – redeem form accessibility", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -152,5 +184,107 @@ describe("InvoicePage – redeem form accessibility", () => {
       "name",
       "redeemAmount",
     );
+  });
+});
+
+describe("InvoicePage – form values after submission", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("preserves issue form values when the transaction fails", async () => {
+    vi.mocked(contracts.invoice.issue).mockRejectedValueOnce(new Error("Network error"));
+    renderInvoicePage();
+
+    const recipient = await screen.findByLabelText(/Recipient Address/i);
+    const amount = screen.getByLabelText(/^Amount \(stroops\)/i);
+    fireEvent.change(recipient, { target: { value: ADDRESS } });
+    fireEvent.change(amount, { target: { value: "500" } });
+    fireEvent.click(screen.getByRole("button", { name: /Issue Invoice Tokens/i }));
+
+    expect(await screen.findByText("Network error")).toBeInTheDocument();
+    expect(recipient).toHaveValue(ADDRESS);
+    expect(amount).toHaveValue(500);
+  });
+
+  it("preserves issue form values when the wallet rejects signing", async () => {
+    vi.mocked(contracts.invoice.issue).mockRejectedValueOnce(new Error("User declined"));
+    renderInvoicePage();
+
+    const amount = await screen.findByLabelText(/^Amount \(stroops\)/i);
+    fireEvent.change(amount, { target: { value: "750" } });
+    fireEvent.click(screen.getByRole("button", { name: /Issue Invoice Tokens/i }));
+
+    expect(await screen.findByText("User declined")).toBeInTheDocument();
+    expect(amount).toHaveValue(750);
+  });
+
+  it("clears issue form values after a confirmed success", async () => {
+    renderInvoicePage();
+
+    const recipient = await screen.findByLabelText(/Recipient Address/i);
+    const amount = screen.getByLabelText(/^Amount \(stroops\)/i);
+    fireEvent.change(recipient, { target: { value: ADDRESS } });
+    fireEvent.change(amount, { target: { value: "500" } });
+    fireEvent.click(screen.getByRole("button", { name: /Issue Invoice Tokens/i }));
+
+    await waitFor(() => expect(amount).toHaveValue(null));
+    expect(recipient).toHaveValue("");
+  });
+
+  it("preserves redeem amount when the transaction fails", async () => {
+    vi.mocked(contracts.invoice.redeem).mockRejectedValueOnce(new Error("Redeem failed"));
+    renderInvoicePage();
+    await screen.findByText("INV-001");
+
+    fireEvent.click(screen.getByRole("button", { name: /^Redeem$/i }));
+    const amount = await screen.findByLabelText(/Amount to Redeem/i);
+    fireEvent.change(amount, { target: { value: "25" } });
+    fireEvent.click(screen.getByRole("button", { name: /Redeem Tokens/i }));
+
+    expect(await screen.findByText("Redeem failed")).toBeInTheDocument();
+    expect(amount).toHaveValue(25);
+  });
+});
+
+describe("InvoicePage – pending action labels", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("shows action-specific pending text and blocks duplicate issue submissions", async () => {
+    let resolveIssue: () => void = () => {};
+    const issueMock = vi.mocked(contracts.invoice.issue);
+    issueMock.mockImplementationOnce(
+      () => new Promise<void>((resolve) => { resolveIssue = resolve; }),
+    );
+    renderInvoicePage();
+
+    fireEvent.change(await screen.findByLabelText(/^Amount \(stroops\)/i), {
+      target: { value: "500" },
+    });
+    const form = screen.getByRole("button", { name: /Issue Invoice Tokens/i }).closest("form")!;
+    fireEvent.submit(form);
+
+    const pendingButton = await screen.findByRole("button", { name: /Issuing invoice tokens/i });
+    expect(pendingButton).toBeDisabled();
+    expect(pendingButton).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByTestId("invoice-pending-status")).toHaveTextContent(
+      "Issuing invoice tokens, please wait.",
+    );
+    // Spinner is decorative and must not be the only cue.
+    expect(screen.getByTestId("spinner")).toHaveAttribute("aria-hidden", "true");
+
+    // A second submission while pending must not trigger another request.
+    fireEvent.submit(form);
+    fireEvent.click(pendingButton);
+    expect(issueMock).toHaveBeenCalledTimes(1);
+
+    resolveIssue();
+    expect(await screen.findByRole("button", { name: /Issue Invoice Tokens/i })).toHaveAttribute(
+      "aria-busy",
+      "false",
+    );
+    expect(screen.getByTestId("invoice-pending-status")).toHaveTextContent("");
   });
 });

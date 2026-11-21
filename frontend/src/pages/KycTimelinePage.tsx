@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAddressValidation } from "../lib/useAddressValidation";
 import { PageHeader, Card, Field, Icon } from "../components/ui";
 import { useToast } from "../lib/toast";
+import { formatKycExpiry } from "../lib/dateFormat";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -30,7 +31,7 @@ const KIND_META: Record<TransitionKind, { label: string; color: string; dot: str
 };
 
 function formatTs(ts: number): string {
-  if (!ts) return "No expiry";
+  if (!ts) return "—";
   return new Date(ts * 1000).toLocaleString();
 }
 
@@ -159,7 +160,7 @@ export default function KycTimelinePage({ fetchHistory = unavailableHistoryFetch
                 <StatusPill kind={latest.kind} />
                 <Stat label="KYC Tier" value={tierLabel(latest.tier)} />
                 <Stat label="Jurisdiction" value={latest.jurisdiction} />
-                <Stat label="Expiry" value={formatTs(latest.expiry)} />
+                <Stat label="Expiry" value={formatKycExpiry(latest.expiry)} />
                 <Stat label="Total transitions" value={String(history.length)} />
               </div>
             ) : null}
@@ -218,7 +219,7 @@ export default function KycTimelinePage({ fetchHistory = unavailableHistoryFetch
 
                         {entry.expiry > 0 && (
                           <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", margin: "0.15rem 0 0" }}>
-                            Expiry snapshot: {formatTs(entry.expiry)}
+                            Expiry snapshot: {formatKycExpiry(entry.expiry)}
                           </p>
                         )}
                       </div>
